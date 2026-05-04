@@ -1,14 +1,5 @@
 // === content_isolated.js (FULL - with Popup Shield Cookie) ===
 
-// Inject blocker_logic.js into MAIN world
-function injectBlocker() {
-  const script = document.createElement('script');
-  script.src = chrome.runtime.getURL('blocker_logic.js');
-  script.onload = function() { this.remove(); };
-  (document.head || document.documentElement).appendChild(script);
-}
-injectBlocker();
-
 // Relay messages from MAIN world to background
 window.addEventListener('message', function(event) {
   if (event.source !== window || !event.data || event.data.type !== '__crunch_block') return;
@@ -54,9 +45,12 @@ async function aggressiveScan() {
   iframes.forEach(ifrm => {
     if (ifrm.width === '1' || ifrm.height === '1' || ifrm.style.width === '1px') {
       ifrm.remove();
-      document.dispatchEvent(new CustomEvent('crunch-blocked', {
-        detail: { type: 'ad', text: 'Invisible Iframe' }
-      }));
+      chrome.runtime.sendMessage({
+        action: 'blockEvent',
+        type: 'ad',
+        text: 'Invisible Iframe',
+        hostname: location.hostname
+      });
     }
   });
 }
@@ -69,7 +63,6 @@ if (window.top === window.self) {
     const domain = location.hostname;
     const STORAGE_KEY = 'popupShieldStates';
 
-    // Read saved state
     let shieldOn = true;
     try {
       const res = await chrome.storage.local.get(STORAGE_KEY);
@@ -90,7 +83,6 @@ if (window.top === window.self) {
       updateUI();
     }
 
-    // Create floating cookie element
     const cookieDiv = document.createElement('div');
     cookieDiv.id = '__crunch_shield_cookie';
     cookieDiv.style.cssText = `
@@ -146,7 +138,6 @@ if (window.top === window.self) {
       setShieldState(!shieldOn);
     });
 
-    // Wait for body to exist
     function inject() {
       if (document.body) {
         document.body.appendChild(cookieDiv);
