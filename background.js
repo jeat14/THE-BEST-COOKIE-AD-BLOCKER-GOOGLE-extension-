@@ -29,7 +29,6 @@ let customBlocklist = [];
 let whitelist = [];
 let isEnabled = true;
 
-const DYNAMIC_RULE_START = 100000;
 let lastBlockedHostname = '';
 
 // Load everything from storage, merge with defaults, then build rules
