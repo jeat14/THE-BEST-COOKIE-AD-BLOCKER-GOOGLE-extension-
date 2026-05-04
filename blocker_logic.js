@@ -28,9 +28,12 @@
     function reportBlock(type, detail) {
         blockCount++;
         try {
-            document.dispatchEvent(new CustomEvent('crunch-blocked', {
-                detail: { type: type, text: detail || '', count: blockCount }
-            }));
+            window.postMessage({
+                type: '__crunch_block',
+                blockType: type,
+                text: detail || '',
+                hostname: location.hostname
+            }, '*');
         } catch(e) {}
     }
 
@@ -80,12 +83,11 @@
     };
 
     // === SCAM POPUP KILLER - MINIMAL, ONLY KILL OBVIOUS SCAMS ===
-    const SCAM_IDS = ['note-', 'missclick-']; // Specific scam patterns
+    const SCAM_IDS = ['note-', 'missclick-'];
     
     function killScamPopups() {
         if (isExcludedSite || !aggressiveMode) return;
         
-        // Kill specific IDs (note-*, missclick-*)
         document.querySelectorAll('[id^="note-"], [id^="missclick-"]').forEach(el => {
             try {
                 reportBlock('popup', 'scam: ' + el.id.substring(0, 20));
@@ -93,7 +95,6 @@
             } catch(e) {}
         });
 
-        // Kill blue bubble scam (rgb(57, 154, 254) + border-radius: 55px)
         document.querySelectorAll('div').forEach(el => {
             try {
                 const style = el.getAttribute('style') || '';
@@ -104,7 +105,6 @@
             } catch(e) {}
         });
 
-        // Kill pl- class elements (wo0f-woof pattern)
         document.querySelectorAll('[class*="pl-__"]').forEach(el => {
             try {
                 const cls = el.className || '';
@@ -121,7 +121,6 @@
         if (!aggressiveMode) return;
         
         try {
-            // Kill ad iframes
             document.querySelectorAll('iframe[src*="doubleclick"], iframe[src*="googlesyndication"], iframe[src*="ads."]').forEach(el => {
                 try {
                     reportBlock('ad', 'ad iframe');
@@ -129,7 +128,6 @@
                 } catch(e) {}
             });
 
-            // Kill ad divs with common patterns
             document.querySelectorAll('[id*="google_ads"], [id*="aswift_"], [id*="ad-"], [id*="gpt-ad"]').forEach(el => {
                 try {
                     if (el.offsetWidth === 0 || el.offsetHeight === 0) return;
