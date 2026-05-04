@@ -1,0 +1,357 @@
+/* Cookie Crunch Blocker - Ad/Popup hiding CSS */
+
+/* YouTube ad elements */
+.ytp-ad-player-overlay-instream-info,
+.ytp-ad-text,
+.ytp-ad-preview-container,
+.ytp-ad-image,
+.ytp-ad-player-overlay,
+.ytp-ad-player-overlay-layout,
+.ytp-ad-overlay-container,
+.ytp-ad-message-container,
+.ytp-ad-action-interstitial,
+.ytp-ad-image-overlay,
+.ytp-ad-visit-advertiser-button,
+.ytp-ad-button-icon,
+.ytp-ad-persistent-progress-bar-container,
+.ytp-ad-skip-button-slot,
+#player-ads,
+ytd-ad-slot-renderer,
+ytd-banner-promo-renderer,
+ytd-promoted-sparkles-web-renderer,
+ytd-promoted-video-renderer,
+ytd-display-ad-renderer,
+ytd-in-feed-ad-layout-renderer,
+.ytd-ad-slot-renderer,
+tp-yt-paper-dialog:has(yt-mealbar-promo-renderer) { display: none !important; }
+
+/* Kill fake notification popups (missed video calls, jerkmate, etc.) */
+div[id^="note-"], div[id^="missclick-"] { display: none !important; }
+
+/* Target the exact blue-bordered circular avatar images used in scam notifications */
+img[style*="rgb(57, 154, 254)"][style*="border-radius: 50%"],
+img[src*=".space/"],
+img.graph[style*="border-radius: 50%"] { display: none !important; }
+
+/* Hide parent containers of these fake notifications */
+div[style*="rgb(57, 154, 254)"][style*="border-radius"] { display: none !important; }
+
+/* Hide any blue speech-bubble popup container */
+div[style*="background"][style*="57, 154, 254"],
+div[style*="background-color"][style*="57, 154, 254"],
+a[style*="background"][style*="57, 154, 254"],
+span[style*="background"][style*="57, 154, 254"] { display: none !important; }
+
+/* Hide elements with inline border-radius that look like notification bubbles */
+div[style*="border-radius: 55px"][style*="background"],
+div[style*="border-radius: 30px"][style*="background"][style*="position: fixed"] { display: none !important; }
+
+/* Kill fake extension install popups (Ad Block Wonder etc.) */
+div[style*="position: fixed"][style*="z-index"] > div[style*="background"][style*="white"],
+div[style*="position: fixed"][style*="z-index"] > div[style*="background-color: rgb(255, 255, 255)"] { display: none !important; }
+
+/* Kill fake "Adblocker-Update" popups with pl- prefixed classes from wo0f-woof.com */
+[class*="pl-"][class*="__top"],
+[class*="pl-"][class*="__message"],
+[class*="pl-"][class*="__btn-block"],
+[class*="pl-"][class*="__picture"],
+[class*="pl-"][class*="__abonem"] { display: none !important; }
+img[src*="wo0f-woof.com"] { display: none !important; }
+
+/* === GENERIC AD ELEMENT HIDING === */
+/* Common ad container IDs (skip YouTube) */
+html:not(.crunch-yt) #ad, #ads, #advert, #advertisement, #ad-container, #ad-wrapper, #ad-banner,
+#ad-slot, #ad-top, #ad-bottom, #ad-sidebar, #ad-footer, #ad-header,
+#ad-leaderboard, #ad-skyscraper, #ad-rectangle, #ad-box,
+#sidebar-ad, #header-ad, #footer-ad, #top-ad, #bottom-ad,
+#dfp-ad-top, #dfp-ad-mid, #dfp-ad-bot, #gpt-ad,
+#banner-ad, #bannerAd, #topAd, #sideAd, #rightAd,
+#google_ads_frame1, #google_ads_frame2, #google_ads_frame3,
+#aswift_0, #aswift_1, #aswift_2, #aswift_3, #aswift_4, #aswift_5 { display: none !important; }
+
+/* Common ad container classes (skip YouTube) */
+html:not(.crunch-yt) .ad, .ads, .advert, .advertisement, .ad-container, .ad-wrapper, .ad-banner,
+.ad-slot, .ad-unit, .ad-zone, .ad-block, .ad-placement, .ad-position,
+.ad-leaderboard, .ad-skyscraper, .ad-rectangle, .ad-box, .ad-panel,
+.ad-sidebar, .ad-header, .ad-footer, .ad-top, .ad-bottom, .ad-middle,
+.ad-label, .ad-text, .ad-title, .ad-inner, .ad-outer, .ad-frame,
+.sidebar-ad, .header-ad, .footer-ad, .top-ad, .bottom-ad,
+.banner-ad, .bannerAd, .adsBox, .adsbox, .ad_unit, .ad_slot,
+.adsbygoogle, .adsbygoogle-noablate,
+.dfp-ad, .gpt-ad, .gpt-slot,
+.sponsored, .sponsored-content, .sponsored-post, .sponsoredContent,
+.native-ad, .nativeAd, .promoted-content, .promotedContent,
+.display-ad, .displayAd,
+.textAd, .text-ad, .text_ad, .text-ads,
+.outbrain, .OUTBRAIN, .ob-widget, .ob-smartfeed-wrapper,
+.taboola, .trc_related_container, .trc-content-sponsored,
+.mgid-wrapper, .mgbox, .mgline,
+.zergnet-widget, .zergnet { display: none !important; }
+
+/* Common ad class patterns (partial match) */
+div[class*="ad-container"], div[class*="ad-wrapper"], div[class*="ad-banner"],
+div[class*="ad-slot"], div[class*="ad_slot"], div[class*="adSlot"],
+div[class*="ad-unit"], div[class*="ad_unit"], div[class*="adUnit"],
+div[class*="ad-zone"], div[class*="adZone"],
+div[class*="ad-placement"], div[class*="adPlacement"],
+div[class*="GoogleAd"], div[class*="google-ad"], div[class*="google_ad"],
+div[class*="gpt-ad"], div[class*="dfp-ad"],
+div[class*="sponsor"], div[class*="Sponsor"],
+aside[class*="ad-"], aside[class*="ad_"], section[class*="ad-"],
+div[id*="ad-container"], div[id*="ad-wrapper"], div[id*="ad-banner"],
+div[id*="ad-slot"], div[id*="ad_slot"], div[id*="adSlot"],
+div[id*="google_ad"], div[id*="GoogleAd"],
+div[id*="gpt-ad"], div[id*="dfp-ad"] { display: none !important; }
+
+/* Ad iframes */
+iframe[id*="google_ads"], iframe[id*="aswift_"],
+iframe[src*="doubleclick.net"], iframe[src*="googlesyndication.com"],
+iframe[src*="googleadservices.com"], iframe[src*="amazon-adsystem.com"],
+iframe[src*="ads."], iframe[src*="/ads/"], iframe[src*="ad."],
+iframe[data-ad], iframe[data-ad-slot],
+ins.adsbygoogle { display: none !important; }
+
+/* Data attribute ad markers (skip YouTube — Google uses these on legit elements) */
+html:not(.crunch-yt) div[data-ad],
+html:not(.crunch-yt) div[data-ad-slot],
+html:not(.crunch-yt) div[data-ad-unit],
+html:not(.crunch-yt) div[data-dfp],
+html:not(.crunch-yt) div[data-google-query-id],
+html:not(.crunch-yt) div[data-native-ad],
+html:not(.crunch-yt) div[data-sponsored],
+div[data-outbrain-widget], div[data-taboola] { display: none !important; }
+
+/* Aria label ad indicators */
+div[aria-label="advertisement" i], div[aria-label="ad" i],
+section[aria-label="advertisement" i], aside[aria-label="advertisement" i],
+div[role="complementary"][aria-label*="sponsor" i],
+div[role="complementary"][aria-label*="advert" i] { display: none !important; }
+
+/* More ad network specific widgets */
+.infolinks-widget, #infolinks-widget-unit,
+.ezoic-ad, div[id^="ezoic-pub-ad-placeholder"],
+div[id^="div-gpt-ad"], div[id^="google_ads_iframe"],
+.mediavine-ad, .mv-ad-box,
+.adthrive-ad, div[class*="adthrive"],
+.nitropay-ad, div[id^="nitro-"],
+.freestar-ad, div[class*="freestar"],
+.primis-player, .primis-ad,
+.connatix-player, div[class*="connatix"],
+.vidazoo-player, div[class*="vidazoo"],
+.setupad-slot,
+.carbon-wrap, #carbonads, .carbonads,
+div[id^="rc-widget"], div[class*="revcontent"],
+div[id^="taboola-"], div[class*="taboola"],
+div[id^="outbrain"], div[class*="outbrain"],
+div[id^="mgid"], div[class*="mgid"],
+div[class*="zergnet"],
+.sovrn-ad, div[class*="sovrn"],
+.lockerdome-widget,
+div[class*="infolinks"],
+div[class*="playwire"],
+div[class*="kargo"],
+div[class*="nativo"],
+div[class*="teads"] { display: none !important; }
+
+/* Interstitial / overlay / pop-up ads */
+div[class*="interstitial"], div[id*="interstitial"],
+div[class*="overlay-ad"], div[id*="overlay-ad"],
+div[class*="modal-ad"], div[id*="modal-ad"],
+div[class*="popup-ad"], div[id*="popup-ad"],
+div[class*="sticky-ad"], div[id*="sticky-ad"],
+div[class*="adhesion"], div[class*="Adhesion"],
+div[class*="floating-ad"], div[id*="floating-ad"],
+div[class*="anchor-ad"], div[id*="anchor-ad"],
+div[class*="bottom-sticky"], div[class*="top-sticky"] { display: none !important; }
+
+/* Video ad overlays */
+div[class*="video-ad"], div[id*="video-ad"],
+div[class*="preroll"], div[class*="midroll"],
+div[class*="postroll"],
+.ima-ad-container, div[id^="ima_"],
+.jw-ad, .jw-ad-notice, .jw-ad-countdown { display: none !important; }
+
+/* Push notification / web push prompts */
+div[class*="push-notification"], div[id*="push-notification"],
+div[class*="web-push"], div[id*="web-push"],
+div[class*="push-prompt"], div[id*="push-prompt"],
+div[class*="notification-prompt"],
+div[class*="subscriber-prompt"],
+div[class*="pushcrew"], div[class*="onesignal"],
+div[id*="pushcrew"], div[id*="OneSignal"] { display: none !important; }
+
+/* In-page push ads */
+div[class*="inpage-push"], div[class*="in-page-push"],
+div[class*="push-in-page"],
+div[class*="push-widget"] { display: none !important; }
+
+/* Tracking pixels and beacons */
+img[src*="pixel"], img[src*="beacon"], img[src*="tracker"],
+img[width="1"][height="1"], img[width="0"][height="0"] { display: none !important; }
+
+/* Direct link / redirect link wrappers */
+a[href*="/afu.php"], a[href*="/click."], a[href*="redirect="],
+a[href*="//ad."], a[href*="smartlink"],
+a[onclick*="window.open"][rel*="nofollow"] { pointer-events: none !important; visibility: hidden !important; }
+
+/* === COOKIE CONSENT BANNER HIDING === */
+/* Common cookie consent frameworks */
+#CybotCookiebotDialog,
+#CybotCookiebotDialogBodyUnderlay,
+#cookiebanner,
+#cookie-banner,
+#cookie-notice,
+#cookie-law-info-bar,
+#cookie-consent,
+#cookie_notice,
+#cookieNotice,
+#cookieConsent,
+#gdpr-cookie-notice,
+#gdpr-consent,
+.cookie-banner,
+.cookie-notice,
+.cookie-consent,
+.cookie-popup,
+.cookie-overlay,
+.cookie-modal,
+.cookies-banner,
+.js-cookie-banner,
+.cc-window,
+.cc-banner,
+.cc-overlay,
+/* OneTrust */
+#onetrust-banner-sdk,
+#onetrust-consent-sdk,
+.onetrust-pc-dark-filter,
+#onetrust-pc-sdk,
+/* Quantcast / CMP */
+#qc-cmp2-container,
+.qc-cmp2-container,
+#qcCmpUi,
+/* CookieYes */
+.cky-consent-container,
+.cky-overlay,
+/* Termly */
+#termly-code-snippet-support,
+/* Complianz */
+#cmplz-cookiebanner-container,
+/* Iubenda */
+#iubenda-cs-banner,
+/* Didomi */
+#didomi-host,
+#didomi-notice,
+/* TrustArc / TRUSTe */
+#truste-consent-track,
+#consent_blackbar,
+.truste_overlay,
+/* Cookiebot */
+#CookiebotWidget,
+/* Generic patterns */
+div[class*="cookie-consent"],
+div[class*="cookie-banner"],
+div[class*="cookie-notice"],
+div[class*="cookieConsent"],
+div[class*="cookie-popup"],
+div[id*="cookie-popup"],
+div[id*="cookie-consent"],
+div[class*="gdpr"],
+div[id*="gdpr"],
+div[aria-label*="cookie" i],
+div[aria-label*="consent" i],
+/* Cookie backdrop overlays */
+.cookie-consent-backdrop,
+.cookie-overlay-bg,
+div[class*="consent-overlay"],
+div[class*="consent-backdrop"] { display: none !important; }
+
+/* Restore scrolling when cookie banners add overflow:hidden to body/html */
+html.cookie-banner-open,
+html.has-cookie-banner,
+html.no-scroll,
+body.cookie-banner-open,
+body.has-cookie-banner,
+body.modal-open-cookie,
+html.CybotCookiebotDialogActive,
+body.CybotCookiebotDialogActive { overflow: auto !important; }
+
+/* === ANTI-ADBLOCK WALL HIDING === */
+/* Common adblock detection overlays */
+#adblock-detector,
+#adblock-notice,
+#adblock-overlay,
+#adblock-wrapper,
+#adblocker-notice,
+#anti-adblock,
+.adblock-overlay,
+.adblock-notice,
+.adblock-modal,
+.adblock-wrapper,
+.anti-adblock,
+.anti-adblock-overlay,
+div[class*="adblock-detect"],
+div[class*="adblocker-notice"],
+div[class*="adblock-warning"],
+div[id*="adblock-detect"],
+div[id*="adblocker-modal"],
+/* Specific anti-adblock services */
+#blockadblock,
+.blockadblock,
+#fuckadblock,
+.fuckadblock,
+#detectadblock,
+.ad-blocker-warning,
+.adblock-message { display: none !important; }
+
+/* Restore page when anti-adblock adds overflow:hidden */
+html.adblock-detected,
+body.adblock-detected,
+html.has-adblock,
+body.has-adblock { overflow: auto !important; }
+
+/* === YOUTUBE ANTI-ADBLOCK WALL HIDING === */
+ytd-enforcement-message-view-model,
+tp-yt-paper-dialog:has(ytd-enforcement-message-view-model),
+tp-yt-iron-overlay-backdrop { display: none !important; }
+
+/* === YOUTUBE PROTECTION — never hide YouTube UI === */
+ytd-masthead,
+ytd-masthead *,
+#masthead,
+#masthead-container,
+ytd-searchbox,
+#search,
+#search-form,
+#search-input,
+#search-icon-legacy,
+#container.ytd-masthead,
+#center.ytd-masthead,
+#end.ytd-masthead,
+#start.ytd-masthead,
+#voice-search-button,
+ytd-topbar-menu-button-renderer,
+#buttons.ytd-masthead,
+#guide-button,
+ytd-masthead #logo,
+ytd-masthead #logo-icon {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* YouTube video player protection — never hide the player */
+#movie_player,
+#player,
+#player-container,
+#ytd-player,
+ytd-player,
+.html5-video-player,
+.html5-video-container,
+#player-container-outer,
+#player-container-inner {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+.html5-video-container video {
+    visibility: visible !important;
+    opacity: 1 !important;
+}

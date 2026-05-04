@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Blocked by Cookie Crunch</title>
+    <style>
+        body { background: #1a1a1a; color: #Fdf5e6; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Arial Black', Arial, sans-serif; text-align: center; }
+        .container { padding: 40px; border: 4px dashed #8B4513; border-radius: 20px; background: #2a2a2a; }
+        h1 { font-size: 40px; color: #D2B48C; margin-bottom: 10px; }
+        p { font-size: 18px; color: #aaa; margin-bottom: 30px; }
+        .btn-close { background: #8B4513; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 50px; }
+        .cookie { font-size: 60px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="cookie">🍪</div>
+        <h1>CRUNCHED!</h1>
+        <p>This site was blocked by Cookie Crunch.<br>Open the extension popup to <b>Disable blocking</b> for this site.</p>
+        <button class="btn-close" id="closeBtn">Close this Tab</button>
+    </div>
+    <script>
+        // Close immediately - try multiple methods
+        function closeNow() {
+            // Method 1: Ask background to close all blocked.html tabs
+            chrome.runtime.sendMessage({action: 'closeBlockedTab'});
+            // Method 2: Try to close self
+            window.close();
+        }
+        
+        // Run immediately
+        closeNow();
+        
+        // Button fallback
+        document.getElementById('closeBtn').onclick = closeNow;
+        
+        // Multiple retry attempts
+        setTimeout(closeNow, 50);
+        setTimeout(closeNow, 150);
+        setTimeout(closeNow, 300);
+        setTimeout(closeNow, 500);
+    </script>
+</body>
+</html>
