@@ -399,5 +399,13 @@
   { "id": 987, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*adscore*", "resourceTypes": ["script", "xmlhttprequest", "image"] } },
   { "id": 988, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*gamingamerica.com*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image"] } },
   { "id": 989, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*nightdestruct.com*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
-  { "id": 990, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*chaturbate.com*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } }
+  { "id": 990, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*chaturbate.com*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
+  { "id": 991, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*adexchangerapid.com*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
+  { "id": 992, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*32red.com*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
+  { "id": 993, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*conditionfuneral.com*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
+  { "id": 994, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*hotslotmagazine.com*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
+  { "id": 995, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*kaninhop.info*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
+  { "id": 996, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*chazanboxiana.cyou*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
+  { "id": 997, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*adsblocked.app*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } },
+  { "id": 998, "priority": 1, "action": { "type": "block" }, "condition": { "urlFilter": "*latestoffers.today*", "resourceTypes": ["main_frame", "sub_frame", "xmlhttprequest", "script", "image", "media", "other"] } }
 ]
