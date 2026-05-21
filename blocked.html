@@ -1,43 +1,308 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Blocked by Cookie Crunch</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>hah u been blocked mf</title>
+    <script>
+        // Failsafe absolute asset resolution & iframe breakout
+        (function() {
+            try {
+                // Absolute URL resolution
+                const base = window.location.href.substring(0, window.location.href.lastIndexOf('/') + 1);
+                if (base && base.startsWith('chrome-extension://')) {
+                    document.addEventListener('DOMContentLoaded', () => {
+                        document.querySelectorAll('img').forEach(img => {
+                            const src = img.getAttribute('src');
+                            if (src && src.startsWith('./assets/')) {
+                                img.src = base + src.slice(2);
+                            }
+                        });
+                    });
+                }
+
+                // Iframe breakout
+                if (window.self !== window.top) {
+                    // Try direct breakout first
+                    try {
+                        window.top.location.href = window.location.href;
+                    } catch (err) {
+                        // Same-Origin policy fallback: ask background to update parent tab
+                        if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                            chrome.runtime.sendMessage({ action: 'breakoutOfIframe' });
+                        }
+                    }
+                }
+            } catch(e) {}
+        })();
+    </script>
     <style>
-        body { background: #1a1a1a; color: #Fdf5e6; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Arial Black', Arial, sans-serif; text-align: center; }
-        .container { padding: 40px; border: 4px dashed #8B4513; border-radius: 20px; background: #2a2a2a; }
-        h1 { font-size: 40px; color: #D2B48C; margin-bottom: 10px; }
-        p { font-size: 18px; color: #aaa; margin-bottom: 30px; }
-        .btn-close { background: #8B4513; color: white; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; border-radius: 50px; }
-        .cookie { font-size: 60px; margin-bottom: 20px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #110c08;
+            color: #Fdf5e6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Arial Black', Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 50% 30%, rgba(139, 69, 19, 0.25) 0%, transparent 80%);
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        .header_wrapper {
+            width: 100%;
+            max-width: 800px;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            z-index: 1;
+            position: relative;
+        }
+        
+        .hero_banner {
+            position: relative;
+            width: 100%;
+            max-width: 728px;
+            min-height: 90px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 3px solid #8B4513;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+            background: #23160e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .hero_banner:hover {
+            transform: scale(1.02);
+        }
+        .hero_banner a {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .hero_banner img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        /* Fallback if banner image is broken/missing */
+        .hero_banner img::after {
+            content: "🎬 StreamUp Promo Banner [third-version.gif]";
+            font-size: 16px;
+            color: #D2B48C;
+            background: #1a1a1a;
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+        
+        .close_banner {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: #8B4513;
+            color: #Fdf5e6;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 13px;
+            border: 2px solid #Fdf5e6;
+            z-index: 2;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .close_banner:hover {
+            background: #d32f2f;
+            transform: scale(1.15) rotate(90deg);
+        }
+        
+        .logoDiv {
+            margin: 15px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .logo {
+            max-height: 80px;
+            max-width: 320px;
+            object-fit: contain;
+        }
+        /* Fallback if logo is broken/missing */
+        .logo::after {
+            content: "🎬 StreamUp";
+            font-size: 32px;
+            color: #D2B48C;
+            background: #23160e;
+            padding: 10px 30px;
+            border-radius: 10px;
+            border: 2px solid #8B4513;
+            display: block;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        #admin-message-x {
+            width: 100%;
+            max-width: 728px;
+            z-index: 1;
+            margin: 10px 0;
+            animation: slideDown 0.5s ease-out forwards;
+        }
+        @keyframes slideDown {
+            0% { transform: translateY(-20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        .admin-message {
+            background: rgba(139, 69, 19, 0.9);
+            color: #Fdf5e6;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            padding: 12px 40px 12px 20px;
+            border-radius: 8px;
+            border-left: 5px solid #D2B48C;
+            text-align: left;
+            position: relative;
+            line-height: 1.4;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .admin-message .close_banner {
+            top: 50%;
+            transform: translateY(-50%);
+            right: 10px;
+            width: 22px;
+            height: 22px;
+            font-size: 10px;
+            border-width: 1.5px;
+        }
+        .admin-message .close_banner:hover {
+            transform: translateY(-50%) scale(1.1) rotate(90deg);
+        }
+
+        .home-section {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 1;
+        }
+        
+        .container {
+            margin: 25px 0;
+            padding: 40px 30px;
+            border: 4px dashed #8B4513;
+            border-radius: 24px;
+            background: rgba(35, 22, 14, 0.9);
+            backdrop-filter: blur(10px);
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.85); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .blocked-photo {
+            max-width: 100%;
+            max-height: 420px;
+            object-fit: contain;
+            border-radius: 16px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            border: 3px solid #8B4513;
+            transition: transform 0.3s ease;
+        }
+        .blocked-photo:hover {
+            transform: scale(1.03);
+        }
+        .blocked-photo::after {
+            content: "HAHA YOU HAVE BEEN BLOCKED MF";
+            color: #d32f2f;
+            font-size: 24px;
+            font-weight: bold;
+            display: block;
+            padding: 40px;
+            background: #23160e;
+            border: 2px dashed #d32f2f;
+            border-radius: 12px;
+        }
+        p.blocked-desc {
+            font-size: 15px;
+            color: #D2B48C;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+        .btn-close {
+            background: linear-gradient(135deg, #8B4513, #A0522D);
+            color: #Fdf5e6;
+            border: none;
+            padding: 14px 36px;
+            font-size: 15px;
+            font-weight: bold;
+            font-family: 'Arial Black', Arial, sans-serif;
+            cursor: pointer;
+            border-radius: 50px;
+            box-shadow: 0 4px 15px rgba(139, 69, 19, 0.4);
+            transition: background 0.3s, transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-close:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 69, 19, 0.6);
+            background: linear-gradient(135deg, #A0522D, #cd853f);
+        }
+        .btn-close:active {
+            transform: translateY(1px);
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="cookie">🍪</div>
-        <h1>CRUNCHED!</h1>
-        <p>This site was blocked by Cookie Crunch.<br>Open the extension popup to <b>Disable blocking</b> for this site.</p>
-        <button class="btn-close" id="closeBtn">Close this Tab</button>
-    </div>
+    <section class="home-section">
+        <!-- Custom Crunched Block Container -->
+        <div class="container">
+            <img class="blocked-photo" src="./assets/blocked-photo.jpg" alt="HAHA YOU HAVE BEEN BLOCKED MF">
+            <p class="blocked-desc">This domain has been crunched by Cookie Crunch.<br>Open the extension popup to <b>Disable blocking</b> if you want to access this site.</p>
+            <button class="btn-close" id="closeBtn">Close this Tab</button>
+        </div>
+    </section>
+
     <script>
-        // Close immediately - try multiple methods
+        // Close immediately on close trigger click
         function closeNow() {
-            // Method 1: Ask background to close all blocked.html tabs
-            chrome.runtime.sendMessage({action: 'closeBlockedTab'});
-            // Method 2: Try to close self
+            chrome.runtime.sendMessage({ action: 'closeBlockedTab' });
             window.close();
         }
-        
-        // Run immediately
-        closeNow();
-        
-        // Button fallback
+
         document.getElementById('closeBtn').onclick = closeNow;
-        
-        // Multiple retry attempts
-        setTimeout(closeNow, 50);
-        setTimeout(closeNow, 150);
-        setTimeout(closeNow, 300);
-        setTimeout(closeNow, 500);
     </script>
 </body>
 </html>
