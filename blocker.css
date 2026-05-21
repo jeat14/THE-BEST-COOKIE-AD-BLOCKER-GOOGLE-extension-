@@ -313,6 +313,72 @@ ytd-enforcement-message-view-model,
 tp-yt-paper-dialog:has(ytd-enforcement-message-view-model),
 tp-yt-iron-overlay-backdrop { display: none !important; }
 
+/* === SCAM NOTIFICATION OVERLAY ADS (DOM-injected fake call/chat bubbles) === */
+/* These appear on torrent/streaming sites as fixed-position chat/call notification widgets */
+
+/* Known class-name prefixes used by scam notification ad scripts */
+[class*="nt_popup"], [class*="ntf_"], [id*="ntf_"],
+[class*="chat-bubble"], [class*="chatbubble"],
+[class*="video-call-notification"], [class*="missed-call"],
+[class*="call-notification"], [class*="notification-call"],
+[class*="fake-chat"], [class*="chat-notify"],
+[class*="bubble-msg"], [class*="msgbubble"],
+[class*="jkm-"], [id*="jkm-"],
+[class*="lhn-"], [id*="lhn-"],
+[class*="sxc-"], [id*="sxc-"],
+[class*="pvp-"], [id*="pvp-"],
+[class*="wnp-"], [id*="wnp-"] { display: none !important; }
+
+/* Scam notification iframes from adult/dating ad networks */
+iframe[src*="jerkmate"], iframe[src*="livejasmin"],
+iframe[src*="streamate"], iframe[src*="imlive"],
+iframe[src*="bongacams"], iframe[src*="camsoda"],
+iframe[src*="chaturbate.com/in/"],
+iframe[src*="camcontacts"], iframe[src*="flirt4free"],
+iframe[src*="strip.chat"], iframe[src*="stripchat"],
+iframe[src*="eplay"], iframe[src*="cam4"],
+iframe[src*="myfreecams"], iframe[src*="cams.com"],
+iframe[src*="adultfriendfinder"],
+/* Scam notification widget host domains */
+iframe[src*="naughtydate"], iframe[src*="meetme-"],
+iframe[src*="finder-x"], iframe[src*="finderx"],
+iframe[src*="wildbuddies"], iframe[src*="dating-push"],
+iframe[src*="push-notify"], iframe[src*="notif-push"],
+iframe[src*="notifywidget"], iframe[src*="chatnotify"] { display: none !important; }
+
+/* Fixed-position elements with very high z-index that are notification-bubble sized */
+/* Only targets elements with the specific inline z-index values scam scripts inject */
+iframe[id*="innerIframe" i],
+#innerIframe,
+div[style*="z-index: 2147483647"][style*="position: fixed"],
+div[style*="z-index:2147483647"][style*="position:fixed"],
+div[style*="z-index: 2147483647"][style*="position:fixed"],
+div[style*="z-index:2147483647"][style*="position: fixed"],
+div[style*="z-index: 2147483647"][style*="position: absolute"],
+div[style*="z-index:2147483647"][style*="position:absolute"],
+div[style*="z-index: 2147483647"][style*="position:absolute"],
+div[style*="z-index:2147483647"][style*="position: absolute"],
+div[style*="z-index: 99999999"][style*="position: fixed"],
+div[style*="z-index: 9999999"][style*="position: fixed"],
+div[style*="z-index: 999999"][style*="position: fixed"],
+div[style*="z-index:9999999"][style*="position:fixed"],
+div[style*="z-index:999999"][style*="position:fixed"],
+div[style*="z-index: 99999999"][style*="position: absolute"],
+div[style*="z-index: 9999999"][style*="position: absolute"],
+div[style*="z-index: 999999"][style*="position: absolute"],
+div[style*="z-index:9999999"][style*="position:absolute"],
+div[style*="z-index:999999"][style*="position:absolute"] { display: none !important; }
+
+/* Blue bubble / pill-shaped notification overlays (the specific #399AFE shade) */
+div[style*="#399afe"], div[style*="#399AFE"],
+div[style*="399, 175, 254"], div[style*="57,154,254"],
+a[style*="#399afe"], a[style*="#399AFE"],
+/* Rounded pill containers used by scam notification widgets */
+div[style*="border-radius: 50px"][style*="position: fixed"],
+div[style*="border-radius: 40px"][style*="position: fixed"],
+div[style*="border-radius:50px"][style*="position:fixed"],
+div[style*="border-radius:40px"][style*="position:fixed"] { display: none !important; }
+
 /* === YOUTUBE PROTECTION — never hide YouTube UI === */
 ytd-masthead,
 ytd-masthead *,
