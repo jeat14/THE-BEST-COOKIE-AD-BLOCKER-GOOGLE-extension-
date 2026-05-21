@@ -2,19 +2,27 @@
 
 // Relay messages from MAIN world to background
 window.addEventListener('message', function(event) {
-  if (event.source !== window || !event.data || event.data.type !== '__crunch_block') return;
-  chrome.runtime.sendMessage({
-    action: 'blockEvent',
-    type: event.data.blockType,
-    text: event.data.text,
-    hostname: location.hostname
-  });
+  if (event.source !== window || !event.data) return;
+  if (event.data.type === '__crunch_block') {
+    chrome.runtime.sendMessage({
+      action: 'blockEvent',
+      type: event.data.blockType,
+      text: event.data.text,
+      hostname: location.hostname
+    });
+  } else if (event.data.type === '__crunch_action') {
+    chrome.runtime.sendMessage({
+      action: event.data.action,
+      hostname: location.hostname
+    });
+  }
 });
 
 // Listen for CRUNCHED! effect
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.action === 'showCrunchEffect') {
     const effect = document.createElement('div');
+    effect.id = '__crunch_effect_notification';
     effect.style.cssText = `
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       z-index: 2147483647; font-family: 'Arial Black', sans-serif;
@@ -71,6 +79,7 @@ if (window.top === window.self) {
         shieldOn = states[domain];
       }
     } catch(e) {}
+    try { window.postMessage({ type: '__crunch_shield', enabled: shieldOn }, '*'); } catch(e) {}
 
     async function setShieldState(value) {
       shieldOn = value;
@@ -81,6 +90,7 @@ if (window.top === window.self) {
         await chrome.storage.local.set({ [STORAGE_KEY]: states });
       } catch(e) {}
       updateUI();
+      try { window.postMessage({ type: '__crunch_shield', enabled: shieldOn }, '*'); } catch(e) {}
     }
 
     const cookieDiv = document.createElement('div');
@@ -149,3 +159,35 @@ if (window.top === window.self) {
     inject();
   })();
 }
+
+// === SETTINGS SYNC WITH MAIN WORLD (blocker_logic.js) ===
+async function sendConfigToMainWorld() {
+  try {
+    const res = await chrome.storage.local.get(['enabled', 'aggressiveMode', 'whitelist']);
+    window.postMessage({
+      type: '__crunch_config',
+      enabled: res.enabled !== false,
+      aggressiveMode: res.aggressiveMode || false,
+      whitelist: res.whitelist || [],
+      assetsUrl: chrome.runtime.getURL('')
+    }, '*');
+  } catch(e) {}
+}
+
+// Initial sync
+sendConfigToMainWorld();
+
+// Listen for config requests from blocker_logic.js
+window.addEventListener('message', function(event) {
+  if (event.source !== window || !event.data) return;
+  if (event.data.type === '__crunch_get_config') {
+    sendConfigToMainWorld();
+  }
+});
+
+// Watch for storage changes and update the main world dynamically
+chrome.storage.onChanged.addListener((changes) => {
+  if (changes.enabled || changes.aggressiveMode || changes.whitelist) {
+    sendConfigToMainWorld();
+  }
+});
