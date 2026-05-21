@@ -11,6 +11,7 @@ let lastStatsHash = "";
 const whitelistInput = document.getElementById('whitelistInput');
 const addWhitelistBtn = document.getElementById('addWhitelistBtn');
 const wlFeedback = document.getElementById('wlFeedback');
+const blockFeedback = document.getElementById('blockFeedback');
 
 // Mascot element
 const mascot = document.getElementById('mascot');
@@ -19,6 +20,77 @@ const mascot = document.getElementById('mascot');
 function crunchify(el) {
   el.classList.add('crunch-effect');
   el.addEventListener('animationend', () => el.classList.remove('crunch-effect'), { once: true });
+}
+
+// Helper: show inline feedback on a span element
+function showFeedback(el, text, color, durationMs) {
+  el.textContent = text;
+  el.style.color = color;
+  el.style.display = 'inline';
+  clearTimeout(el._feedbackTimer);
+  el._feedbackTimer = setTimeout(() => { el.style.display = 'none'; }, durationMs || 2500);
+}
+
+// Elements for Manage Filters
+const manageBtn = document.getElementById('manageBtn');
+const managePanel = document.getElementById('managePanel');
+const customBlockList = document.getElementById('customBlockList');
+const whiteListContainer = document.getElementById('whiteListContainer');
+
+// Toggle Manage Filters panel
+manageBtn.onclick = () => {
+  crunchify(manageBtn);
+  if (managePanel.style.display === 'none') {
+    managePanel.style.display = 'block';
+    refreshLists();
+  } else {
+    managePanel.style.display = 'none';
+  }
+};
+
+function refreshLists() {
+  chrome.runtime.sendMessage({ action: 'getLists' }, (res) => {
+    if (!res) return;
+    renderManageList(customBlockList, res.customBlocklist || [], 'removeCustomBlock');
+    renderManageList(whiteListContainer, res.whitelist || [], 'removeWhitelist');
+  });
+}
+
+function renderManageList(container, items, actionName) {
+  if (items.length === 0) {
+    container.innerHTML = '<div class="manage-empty">No items in this list</div>';
+    return;
+  }
+  container.innerHTML = '';
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'manage-item';
+    
+    const domainSpan = document.createElement('span');
+    domainSpan.className = 'manage-domain';
+    domainSpan.textContent = item;
+    
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-item-btn';
+    delBtn.innerHTML = '🗑️';
+    delBtn.title = 'Remove';
+    delBtn.onclick = () => {
+      crunchify(delBtn);
+      chrome.runtime.sendMessage({ action: actionName, domain: item }, (res) => {
+        if (res && res.success) {
+          refreshLists();
+          // If we removed the currently open site from blocklist/whitelist, reload it
+          if (item === currentHostname) {
+            reloadActiveTab();
+          }
+        }
+      });
+    };
+    
+    row.appendChild(domainSpan);
+    row.appendChild(delBtn);
+    container.appendChild(row);
+  });
 }
 
 // Initialize
@@ -47,11 +119,14 @@ addCustomBtn.onclick = () => {
   const domain = customInput.value.trim().toLowerCase();
   if (!domain) return;
   chrome.runtime.sendMessage({ action: 'addCustomBlock', domain }, (res) => {
-    if (res) {
+    if (res === true) {
       customInput.value = "";
-      alert(`Added ${domain} to the crunch list!`);
+      showFeedback(blockFeedback, `✓ ${domain} blocked`, '#4CAF50');
+      if (managePanel.style.display !== 'none') refreshLists();
+    } else if (res === false) {
+      showFeedback(blockFeedback, '⚠ Already in list', '#e65100');
     } else {
-      alert("Error adding domain.");
+      showFeedback(blockFeedback, '✗ Error', '#d32f2f');
     }
   });
 };
@@ -65,39 +140,30 @@ addWhitelistBtn.onclick = () => {
   chrome.runtime.sendMessage({ action: 'toggleWhitelist', hostname: domain }, (res) => {
     if (res) {
       const isWhitelisted = res.whitelisted;
-      // Show feedback
-      wlFeedback.style.display = 'inline';
-      wlFeedback.textContent = isWhitelisted ? '✓ Whitelisted' : '✗ Removed';
-      wlFeedback.style.color = isWhitelisted ? '#4CAF50' : '#d32f2f';
-      setTimeout(() => { wlFeedback.style.display = 'none'; }, 2500);
-
+      showFeedback(wlFeedback, isWhitelisted ? '✓ Whitelisted' : '✗ Removed', isWhitelisted ? '#4CAF50' : '#d32f2f');
       whitelistInput.value = '';
-
-      // If it matches current tab, update the main disable button
       if (domain === currentHostname) {
         updateWlBtn(isWhitelisted);
       }
-
-      alert(`${isWhitelisted ? 'Whitelisted' : 'Removed from whitelist'}: ${domain}`);
+      if (managePanel.style.display !== 'none') refreshLists();
     } else {
-      alert('Error whitelisting domain.');
+      showFeedback(wlFeedback, '✗ Error', '#d32f2f');
     }
   });
 };
 
 wlBtn.onclick = () => {
-  chrome.runtime.sendMessage({ action: 'getStats' }, (stats) => {
-    const host = stats?.hostname || currentHostname;
-    if (!host) {
-      alert("Could not detect site hostname. Please try refreshing the page and opening the popup again.");
-      return;
+  const host = currentHostname;
+  if (!host) {
+    showFeedback(blockFeedback, 'Refresh page first', '#e65100');
+    return;
+  }
+  chrome.runtime.sendMessage({ action: 'toggleWhitelist', hostname: host }, (res) => {
+    if (res) {
+      updateWlBtn(res.whitelisted);
+      reloadActiveTab();
+      if (managePanel.style.display !== 'none') refreshLists();
     }
-    chrome.runtime.sendMessage({ action: 'toggleWhitelist', hostname: host }, (res) => {
-      if (res) {
-        updateWlBtn(res.whitelisted);
-        reloadActiveTab();
-      }
-    });
   });
 };
 
