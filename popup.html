@@ -163,6 +163,89 @@
       margin-left: 4px;
       font-weight: bold;
     }
+
+    /* Filter Management Styles */
+    .manage-section {
+      margin-bottom: 10px;
+      text-align: left;
+    }
+    .manage-btn {
+      width: 100%;
+      padding: 6px;
+      border: 2px solid #8B4513;
+      border-radius: 8px;
+      background: #8B4513;
+      color: #fff;
+      font-size: 10px;
+      font-weight: bold;
+      font-family: 'Arial Black', sans-serif;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.3s;
+    }
+    .manage-btn:hover {
+      background: #A0522D;
+    }
+    .manage-panel {
+      background: #fff;
+      border: 2px solid #D2B48C;
+      border-radius: 8px;
+      padding: 8px;
+      margin-top: 4px;
+    }
+    .manage-list-title {
+      font-size: 9px;
+      color: #8B4513;
+      font-weight: bold;
+      margin-bottom: 4px;
+      border-bottom: 1px dashed #D2B48C;
+      padding-bottom: 2px;
+    }
+    .manage-list-container {
+      max-height: 80px;
+      overflow-y: auto;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+    }
+    .manage-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 4px;
+      border-bottom: 1px solid #f9f5f0;
+      color: #333;
+    }
+    .manage-item:last-child {
+      border-bottom: none;
+    }
+    .manage-domain {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      margin-right: 8px;
+    }
+    .delete-item-btn {
+      background: none;
+      border: none;
+      color: #d32f2f;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
+      padding: 0 4px;
+      line-height: 1;
+    }
+    .delete-item-btn:hover {
+      color: #b71c1c;
+      transform: scale(1.2);
+    }
+    .manage-empty {
+      color: #aaa;
+      font-style: italic;
+      font-size: 10px;
+      text-align: center;
+      padding: 6px 0;
+    }
   </style>
 </head>
 <body>
@@ -217,6 +300,7 @@
   <div class="custom-block-row">
     <input type="text" id="customDomain" class="custom-input" placeholder="block domain.com">
     <button id="addCustomBtn" class="add-btn">ADD</button>
+    <span class="wl-feedback" id="blockFeedback"></span>
   </div>
 
   <!-- Whitelist Domain Input -->
@@ -224,6 +308,21 @@
     <input type="text" id="whitelistInput" class="custom-input" placeholder="whitelist domain.com">
     <button id="addWhitelistBtn" class="add-btn" style="background:#4CAF50;">ADD</button>
     <span class="wl-feedback" id="wlFeedback"></span>
+  </div>
+
+  <!-- Manage Filters Section -->
+  <div class="manage-section">
+    <button id="manageBtn" class="manage-btn">⚙️ MANAGE FILTERS</button>
+    <div id="managePanel" class="manage-panel" style="display: none;">
+      <div class="manage-list-title">CUSTOM BLOCKED DOMAINS</div>
+      <div id="customBlockList" class="manage-list-container">
+        <div class="manage-empty">No custom blocks yet</div>
+      </div>
+      <div class="manage-list-title" style="margin-top: 10px;">WHITELISTED DOMAINS</div>
+      <div id="whiteListContainer" class="manage-list-container">
+        <div class="manage-empty">No whitelisted sites yet</div>
+      </div>
+    </div>
   </div>
 
   <div class="lifetime">
