@@ -37,6 +37,7 @@ const DEFAULT_KILL_LIST = [
     , "conditionfuneral.com"
     , "hotslotmagazine.com"
     , "kaninhop.info"
+    , "thatdisform.cyou"
 ];
 
 // === AD NETWORK PATTERNS for auto-close (broader than KILL_LIST) ===
@@ -67,6 +68,7 @@ const AD_NETWORK_PATTERNS = [
     'richpush.co',
     'adexchangerapid.com',
     'chazanboxiana.cyou',
+    'thatdisform.cyou',
     'adsblocked.app',
     'latestoffers.today',
     // Generic ad tracking / redirect chains
@@ -134,6 +136,9 @@ function extractHostname(raw) {
             domain = new URL('https://' + domain).hostname;
         }
     } catch (e) {}
+    if (domain.startsWith('www.')) {
+        domain = domain.slice(4);
+    }
     return domain;
 }
 
@@ -257,7 +262,7 @@ function setupRedirectRules() {
         priority: 10,
         action: {
             type: "redirect",
-            redirect: { extensionPath: "/blocked.html" }
+            redirect: { extensionPath: "/blocked.html?popup=1" }
         },
         condition: {
             urlFilter: `*${domain}*`,
@@ -282,7 +287,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ status: 'closed' });
     }
     else if (msg.action === 'breakoutOfIframe' && sender.tab) {
-        chrome.tabs.update(sender.tab.id, { url: chrome.runtime.getURL('/blocked.html') }).catch(() => {});
+        chrome.tabs.update(sender.tab.id, { url: chrome.runtime.getURL('/blocked.html?popup=1') }).catch(() => {});
         sendResponse({ status: 'broken' });
     }
     else if (msg.action === 'reloadTab' && sender.tab) {
@@ -292,6 +297,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     else if (msg.action === 'closeTab' && sender.tab) {
         chrome.tabs.remove(sender.tab.id).catch(() => {});
         sendResponse({ status: 'closed' });
+    }
+    else if (msg.action === 'muteTab' && sender.tab) {
+        chrome.tabs.update(sender.tab.id, { muted: msg.muted }).catch(() => {});
+        sendResponse({ status: 'muted', value: msg.muted });
     }
     else if (msg.action === 'blockEvent' && sender.tab) {
         ensureInitialized().then(() => {
@@ -566,7 +575,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
 // Helper to handle blocked tab - redirects to blocked.html, falls back to closing
 function killTab(tabId) {
-    chrome.tabs.update(tabId, { url: chrome.runtime.getURL('/blocked.html') }).catch(() => {
+    chrome.tabs.update(tabId, { url: chrome.runtime.getURL('/blocked.html?popup=1') }).catch(() => {
         chrome.tabs.remove(tabId).catch(() => {});
     });
 }
