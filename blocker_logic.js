@@ -7,6 +7,62 @@
 
     console.log("🍪 Cookie Crunch: Activated on", location.hostname);
 
+    // === Track all media elements (even dynamically created / detached ones) ===
+    const activeMediaElements = new Set();
+    let originalPlaybackRateSetter = null;
+    let originalMutedSetter = null;
+    try {
+        const prDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'playbackRate');
+        if (prDescriptor && prDescriptor.set) {
+            originalPlaybackRateSetter = prDescriptor.set;
+        }
+        const mDescriptor = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, 'muted');
+        if (mDescriptor && mDescriptor.set) {
+            originalMutedSetter = mDescriptor.set;
+        }
+    } catch(e) {}
+
+    function forcePlaybackRateAndMute(m, speed, muted) {
+        try {
+            if (originalPlaybackRateSetter) {
+                originalPlaybackRateSetter.call(m, speed);
+            } else {
+                m.playbackRate = speed;
+            }
+        } catch(e) {
+            try { m.playbackRate = speed; } catch(err) {}
+        }
+
+        try {
+            if (originalMutedSetter) {
+                originalMutedSetter.call(m, muted);
+            } else {
+                m.muted = muted;
+            }
+        } catch(e) {
+            try { m.muted = muted; } catch(err) {}
+        }
+    }
+
+    try {
+        const realCreateElement = document.createElement;
+        document.createElement = function(tagName, options) {
+            const el = realCreateElement.call(this, tagName, options);
+            if (el && (tagName.toLowerCase() === 'audio' || tagName.toLowerCase() === 'video')) {
+                activeMediaElements.add(el);
+            }
+            return el;
+        };
+
+        const realAudio = window.Audio;
+        window.Audio = function(src) {
+            const el = new realAudio(src);
+            activeMediaElements.add(el);
+            return el;
+        };
+        window.Audio.prototype = realAudio.prototype;
+    } catch(e) {}
+
     // === SYNCHRONIZED SETTINGS ===
     let isEnabled = true;
     let aggressiveMode = false;
@@ -39,9 +95,14 @@
     ];
     const isExcludedSite = POPUP_EXCLUDE_SITES.some(s => location.hostname.includes(s));
     const SAFE_HOST_SUFFIXES = [
-        'youtube.com', 'google.com', 'accounts.google.com', 'mail.google.com',
+        'youtube.com',
+        'google.com', 'google.co.uk', 'google.com.au', 'google.ca',
+        'google.de', 'google.fr', 'google.es', 'google.it',
+        'google.co.in', 'google.co.jp', 'google.com.br',
+        'accounts.google.com', 'mail.google.com',
         'github.com', 'stackoverflow.com', 'reddit.com', 'wikipedia.org',
-        'amazon.com', 'bing.com', 'duckduckgo.com',
+        'amazon.com', 'bing.com', 'duckduckgo.com', 'spotify.com',
+        'bbc.co.uk', 'bbc.com',
     ];
     const HIGH_RISK_HOST_SUFFIXES = [
         'x1337x.cc', '1337x.to', '1337x.st', '1337x.so', '1337x.ws',
@@ -576,6 +637,9 @@
         
         // Additional click handler to catch popup triggers
         document.addEventListener('click', function(e) {
+            // Never interfere on safe hosts (Google, YouTube, GitHub, etc.)
+            if (isSafeHost) return;
+
             const el = e.target;
             
             // Check if clicking on elements that commonly trigger popups
@@ -593,7 +657,9 @@
                                  current.getAttribute('data-href') || 
                                  current.getAttribute('data-url') || '';
                     
-                    if (href && (isAdUrl(href) || /(redirect|clk|go|track|trk|click)/i.test(href))) {
+                    // Use isAdUrl for known patterns; for URL-path-based patterns require
+                    // a proper path segment boundary to avoid false positives on query strings
+                    if (href && (isAdUrl(href) || /[\/=&?](redirect|clk|go|trk|track|adclick)[\/=&?]|[\/](go|clk|redirect|trk)[\/?]/i.test(href))) {
                         e.preventDefault();
                         e.stopImmediatePropagation();
                         reportBlock('popup', 'ad click blocked: ' + href.slice(0, 60));
@@ -806,13 +872,31 @@
 
     const isYouTubeAdPlaying = () => {
         // Multiple detection signals for robustness
-        if (document.querySelector('.ad-showing')) return true;
-        if (document.querySelector('.ytp-ad-player-overlay')) return true;
-        if (document.querySelector('.ytp-ad-simple-ad-badge')) return true;
-        if (document.querySelector('.ytp-ad-preview-container')) return true;
-        if (document.querySelector('.ytp-ad-progress')) return true;
+        if (document.querySelector(
+            '.ad-showing, .ad-interrupting, .ytp-ad-player-overlay, ' +
+            '.ytp-ad-simple-ad-badge, .ytp-ad-preview-container, .ytp-ad-progress, ' +
+            '.ytp-ad-player-overlay-layout, .ytp-ad-player-overlay-layout__ad-info-container, ' +
+            '.ytp-ad-player-overlay-flyout, [class*="ytp-ad-player-overlay"], ' +
+            '[class*="ytp-ad-image-overlay"], .ytp-ad-overlay-container, .ytp-ad-text'
+        )) return true;
+        
+        // Check dynamic ad module containers (like the circular countdown overlay)
+        const adModule = document.querySelector('.ytp-ad-module');
+        if (adModule && adModule.children.length > 0) {
+            if (adModule.querySelector('[class*="ytp-ad-"]')) return true;
+        }
+
+        // If a skip button is visible, an ad is definitely playing
+        const skipBtn = document.querySelector(
+            '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, ' +
+            'button[aria-label*="Skip ad" i], button[aria-label*="Skip" i], ' +
+            'button[class*="skip-ad" i], button[class*="skip-button" i], ' +
+            '[class*="ytp-ad-skip-button" i], [class*="ytp-skip-ad-button" i]'
+        );
+        if (skipBtn) return true;
+        
         const player = document.getElementById('movie_player');
-        if (player && player.classList.contains('ad-showing')) return true;
+        if (player && (player.classList.contains('ad-showing') || player.classList.contains('ad-interrupting'))) return true;
         return false;
     };
 
@@ -821,54 +905,103 @@
 
         // Close overlay/banner ads first (these don't need throttle)
         const overlayClose = document.querySelector(
-            '.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container button'
+            '.ytp-ad-overlay-close-button, .ytp-ad-overlay-close-container button, ' +
+            '[class*="ytp-ad-overlay-close" i], button[aria-label*="Close" i]'
         );
         if (overlayClose && overlayClose.offsetParent !== null) {
             try { overlayClose.click(); reportBlock('ad', 'youtube overlay closed'); } catch(e) {}
         }
 
-        if (!isYouTubeAdPlaying()) return;
+        const isAd = isYouTubeAdPlaying();
 
-        // Throttle skip attempts to 500ms
-        const now = Date.now();
-        if (now - lastSkipAttempt < 500) return;
-        lastSkipAttempt = now;
-
-        // 1. Try skip button (skippable ads)
-        const skipButtons = document.querySelectorAll(
-            '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, ' +
-            'button.ytp-ad-skip-button-modern, [id^="skip-button"], .videoAdUiSkipButton, ' +
-            '.ytp-ad-skip-button-slot button, .ytp-ad-skip-button-container button'
-        );
-        for (const btn of skipButtons) {
-            if (btn && btn.offsetParent !== null) {
-                try {
-                    btn.click();
-                    reportBlock('ad', 'youtube ad skipped');
-                    return;
-                } catch(e) {}
-            }
-        }
-
-        // 2. Unskippable ad — mute and seek video to end to force ad to finish
         try {
             const player = document.getElementById('movie_player');
-            if (!player) return;
-            const video = player.querySelector('video');
-            if (video && isFinite(video.duration) && video.duration > 0) {
-                const wasMuted = video.muted;
-                video.muted = true;
-                video.currentTime = video.duration;
-                video.addEventListener('ended', function onAdEnded() {
-                    setTimeout(() => {
-                        try {
-                            video.muted = wasMuted;
-                            if (video.paused) video.play().catch(() => {});
-                        } catch(e) {}
-                    }, 300);
-                }, { once: true });
-                setTimeout(() => { try { video.muted = wasMuted; } catch(e) {} }, 800);
-                reportBlock('ad', 'youtube unskippable ad force-ended');
+            const videos = new Set();
+            if (player) {
+                const v = player.querySelector('video');
+                if (v) videos.add(v);
+            }
+            document.querySelectorAll('video').forEach(v => videos.add(v));
+            activeMediaElements.forEach(m => {
+                if (m.tagName && m.tagName.toLowerCase() === 'video') {
+                    videos.add(m);
+                }
+            });
+
+            if (videos.size === 0) return;
+
+            if (isAd) {
+                // 1. Try skip button (skippable ads)
+                const skipButtons = document.querySelectorAll(
+                    '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, ' +
+                    'button.ytp-ad-skip-button-modern, [id^="skip-button"], .videoAdUiSkipButton, ' +
+                    '.ytp-ad-skip-button-slot button, .ytp-ad-skip-button-container button, ' +
+                    'button[aria-label*="Skip ad" i], button[aria-label*="Skip" i], ' +
+                    'button[class*="skip-ad" i], button[class*="skip-button" i], ' +
+                    '[class*="ytp-ad-skip-button" i], [class*="ytp-skip-ad-button" i]'
+                );
+                for (const btn of skipButtons) {
+                    try {
+                        btn.click();
+                        // Dispatch mouse events to bypass isTrusted or interaction checks
+                        ['mousedown', 'mouseup', 'click'].forEach(type => {
+                            btn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+                        });
+                        reportBlock('ad', 'youtube ad skipped');
+                    } catch(e) {}
+                }
+
+                // 2. Unskippable ad — mute and 16x speed (remove currentTime seek to prevent buffer/anti-adblock freezes)
+                for (const video of videos) {
+                    if (isFinite(video.duration) && video.duration > 0) {
+                        if (!video._ytAdActive) {
+                            video._ytAdActive = true;
+                            video._ytSavedRate = video.playbackRate === 16 ? 1 : video.playbackRate;
+                            video._ytSavedMuted = video.muted;
+
+                            if (!video._crunchYtHooked) {
+                                video._crunchYtHooked = true;
+                                
+                                // Re-apply 16x and mute if page script attempts to reset them during the ad
+                                video.addEventListener('ratechange', () => {
+                                    if (video._ytAdActive && video.playbackRate !== 16) {
+                                        forcePlaybackRateAndMute(video, 16, true);
+                                    }
+                                });
+                                video.addEventListener('volumechange', () => {
+                                    if (video._ytAdActive && !video.muted) {
+                                        forcePlaybackRateAndMute(video, 16, true);
+                                    }
+                                });
+                                
+                                // Restore state if video naturally ends
+                                video.addEventListener('ended', () => {
+                                    if (video._ytAdActive) {
+                                        video._ytAdActive = false;
+                                        forcePlaybackRateAndMute(video, video._ytSavedRate || 1, video._ytSavedMuted || false);
+                                    }
+                                });
+                            }
+                        }
+
+                        // Enforce 16x and mute
+                        forcePlaybackRateAndMute(video, 16, true);
+                    }
+                }
+
+                const now = Date.now();
+                if (!handleYouTube._lastLog || now - handleYouTube._lastLog > 1500) {
+                    handleYouTube._lastLog = now;
+                    reportBlock('ad', 'youtube unskippable ad crunched');
+                }
+            } else {
+                // Restore state if ad just finished
+                for (const video of videos) {
+                    if (video._ytAdActive) {
+                        video._ytAdActive = false;
+                        forcePlaybackRateAndMute(video, video._ytSavedRate || 1, video._ytSavedMuted || false);
+                    }
+                }
             }
         } catch(e) {}
     };
@@ -899,6 +1032,8 @@
         'video chat', 'cam chat', 'live cam', 'live girls',
         'sports bet', 'bet now', 'casino', 'gambling', 'betting', 'sportsbook',
         'free bet', 'win big', 'place your bet',
+        'adblocker-update', 'adblocker update', 'install latest ver. to reduce load time',
+        'operasetup', 'opera update', 'install opera', 'download opera',
     ];
 
     // Scam iframe src patterns (domains that host notification overlay widgets)
@@ -978,7 +1113,7 @@
 
     // Dynamic scanner targeting the sandboxed innerIframe overlay patterns
     function killFullscreenInnerIframeOverlays() {
-        if (isExcludedSite) return;
+        if (isExcludedSite || isSafeHost) return;
         try {
             // Find all matching iframes (case-insensitive id contains "innerIframe")
             const innerIframes = [];
@@ -1018,6 +1153,7 @@
                             const textLen = (div.textContent || '').trim().length;
                             if (innerIframes.length > 0 || textLen < 50) {
                                 removeScamEl(div);
+                                showCrunchOverlay();
                             }
                         }
                     }
@@ -1027,6 +1163,7 @@
             // Remove the innerIframe elements themselves
             innerIframes.forEach(iframe => {
                 removeScamEl(iframe);
+                showCrunchOverlay();
             });
 
             // Force restore overflow scrollability on document/body elements
@@ -1043,7 +1180,7 @@
 
     // Immediate DOM scan — runs always (not gated by aggressiveMode)
     function killScamOverlays() {
-        if (isExcludedSite) return;
+        if (isExcludedSite || isSafeHost) return;
         try {
             killFullscreenInnerIframeOverlays();
             // Fast selector pass for known patterns
@@ -1119,117 +1256,115 @@
         } catch(e) {}
     }
 
-    // MutationObserver — fires immediately when scam overlays are injected into DOM
-    if (shouldRunPopupKillers()) {
-        const scamOverlayObserver = new MutationObserver((mutations) => {
-            for (const m of mutations) {
-                for (const node of m.addedNodes) {
-                    if (node.nodeType !== Node.ELEMENT_NODE) continue;
-                    
-                    // Direct check for the iframe or its containing overlay
-                    const tag = node.tagName.toLowerCase();
-                    const id = (node.id || '').toLowerCase();
-                    const style = node.getAttribute('style') || '';
-                    
-                    if (tag === 'iframe' && (id === 'inneriframe' || id.includes('inneriframe'))) {
-                        killFullscreenInnerIframeOverlays();
-                        continue;
-                    }
-                    
-                    // If a max z-index full-screen overlay div is injected
-                    if (tag === 'div' && (style.includes('z-index: 2147483647') || style.includes('z-index:2147483647') || style.includes('z-index: 999999') || style.includes('z-index:999999'))) {
-                        killFullscreenInnerIframeOverlays();
-                        continue;
-                    }
+    // === UNIFIED HIGH-PERFORMANCE MUTATION OBSERVER ===
+    const AD_SCRIPT_NAMES = ['/ads.js', '/pagead.js', '/advertisement.js', '/tracking.js', 'pop-ad.js', 'pop-ad'];
 
-                    if (isScamOverlayEl(node)) {
-                        removeScamEl(node);
+    const unifiedObserver = new MutationObserver((mutations) => {
+        const scriptBlockEnabled = shouldRunPopupKillers();
+        const isGeneralSite = !isExcludedSite;
+        let runOverlayCheck = false;
+        const nodesToRemove = [];
+
+        for (const m of mutations) {
+            for (const node of m.addedNodes) {
+                if (node.nodeType !== Node.ELEMENT_NODE) continue;
+                const tag = node.tagName.toLowerCase();
+
+                // 1. Script checks
+                if (tag === 'script' && scriptBlockEnabled && node.src) {
+                    const src = node.src.toLowerCase();
+                    if (AD_SCRIPT_NAMES.some(n => src.includes(n)) || isAdUrl(src)) {
+                        nodesToRemove.push(node);
+                        reportBlock('ad', 'script: ' + src.split('/').pop());
                         continue;
                     }
-
-                    // Also check immediate children (some scripts wrap in a container)
-                    try {
-                        if (node.querySelector('iframe[id*="innerIframe" i], #innerIframe')) {
-                            killFullscreenInnerIframeOverlays();
-                        }
-                        
-                        node.querySelectorAll(
-                            '[id^="note-"], [id^="missclick-"], [class*="pl-__"], ' +
-                            'iframe[src*="jerkmate"], iframe[src*="livejasmin"], ' +
-                            'iframe[src*="bongacams"], iframe[src*="stripchat"], ' +
-                            'iframe[src*="adultfriendfinder"], ' +
-                            'div[style*="57, 154, 254"], div[style*="57,154,254"], ' +
-                            'div[style*="border-radius: 55px"], div[style*="border-radius:55px"]'
-                        ).forEach(child => {
-                            if (!child.closest('[id^="note-"]') || child === node) {
-                                // Double-check for blue bubble pattern
-                                const style = child.getAttribute('style') || '';
-                                if ((style.includes('57, 154, 254') || style.includes('57,154,254') || 
-                                     style.includes('#399afe') || style.includes('#399AFE')) &&
-                                    (style.includes('border-radius: 55px') || style.includes('border-radius:55px'))) {
-                                    removeScamEl(child);
-                                } else if (style.includes('57, 154, 254') || style.includes('57,154,254')) {
-                                    removeScamEl(child);
-                                } else {
-                                    removeScamEl(child);
-                                }
-                            }
-                        });
-                    } catch(e) {}
                 }
-            }
-        });
 
-        function startScamObserver() {
-            if (!document.body) { setTimeout(startScamObserver, 50); return; }
-            scamOverlayObserver.observe(document.body, { childList: true, subtree: true });
-        }
-        startScamObserver();
-    }
+                const id = (node.id || '').toLowerCase();
+                const style = node.getAttribute ? (node.getAttribute('style') || '') : '';
 
-    // === ALWAYS-ON innerIframe/fullscreen overlay observer (runs on ALL sites) ===
-    // These patterns are NEVER legitimate — safe to intercept universally
-    if (!isExcludedSite) {
-        const innerIframeObserver = new MutationObserver((mutations) => {
-            for (const m of mutations) {
-                for (const node of m.addedNodes) {
-                    if (node.nodeType !== Node.ELEMENT_NODE) continue;
-                    const tag = (node.tagName || '').toLowerCase();
-                    const id = (node.id || '').toLowerCase();
-                    const style = node.getAttribute ? (node.getAttribute('style') || '') : '';
-
-                    // Direct innerIframe injection
+                // 2. Iframe / Overlay checks — skip on safe hosts (Google, YouTube, etc.)
+                if (isGeneralSite && !isSafeHost) {
                     if (tag === 'iframe' && (id === 'inneriframe' || id.includes('inneriframe'))) {
-                        killFullscreenInnerIframeOverlays();
-                        continue;
-                    }
-
-                    // Fullscreen transparent overlay div with max z-index
-                    if (tag === 'div' && (style.includes('2147483647') || style.includes('z-index: 999999') || style.includes('z-index:999999'))) {
+                        runOverlayCheck = true;
+                    } else if (tag === 'div' && (style.includes('2147483647') || style.includes('z-index: 999999') || style.includes('z-index:999999'))) {
                         const hasFixed = style.includes('position: fixed') || style.includes('position:fixed') ||
                                          style.includes('position: absolute') || style.includes('position:absolute');
                         if (hasFixed) {
-                            killFullscreenInnerIframeOverlays();
-                            continue;
+                            runOverlayCheck = true;
                         }
                     }
+                }
 
-                    // Check children for wrapped injection
+                // 3. Scam overlay checks
+                if (scriptBlockEnabled) {
+                    if (isScamOverlayEl(node)) {
+                        nodesToRemove.push(node);
+                        continue;
+                    }
+
+                    // Check children for wrapped elements
                     try {
                         if (node.querySelector && node.querySelector('iframe[id*="innerIframe" i], #innerIframe')) {
-                            killFullscreenInnerIframeOverlays();
+                            runOverlayCheck = true;
+                        }
+
+                        // Query for known child patterns in dynamic insertions
+                        if (tag === 'div' || tag === 'span' || tag === 'a' || tag === 'iframe') {
+                            node.querySelectorAll(
+                                '[id^="note-"], [id^="missclick-"], [class*="pl-__"], ' +
+                                'iframe[src*="jerkmate"], iframe[src*="livejasmin"], ' +
+                                'iframe[src*="bongacams"], iframe[src*="stripchat"], ' +
+                                'iframe[src*="adultfriendfinder"], ' +
+                                'div[style*="57, 154, 254"], div[style*="57,154,254"], ' +
+                                'div[style*="border-radius: 55px"], div[style*="border-radius:55px"]'
+                            ).forEach(child => {
+                                if (!child.closest('[id^="note-"]') || child === node) {
+                                    const cStyle = child.getAttribute('style') || '';
+                                    if ((cStyle.includes('57, 154, 254') || cStyle.includes('57,154,254') || 
+                                         cStyle.includes('#399afe') || cStyle.includes('#399AFE')) &&
+                                        (cStyle.includes('border-radius: 55px') || cStyle.includes('border-radius:55px'))) {
+                                        nodesToRemove.push(child);
+                                    } else if (cStyle.includes('57, 154, 254') || cStyle.includes('57,154,254')) {
+                                        nodesToRemove.push(child);
+                                    } else {
+                                        nodesToRemove.push(child);
+                                    }
+                                }
+                            });
                         }
                     } catch(e) {}
                 }
             }
-        });
-
-        function startInnerIframeObserver() {
-            if (!document.body) { setTimeout(startInnerIframeObserver, 50); return; }
-            innerIframeObserver.observe(document.body, { childList: true, subtree: true });
         }
-        startInnerIframeObserver();
+
+        // Process removals in a single batch to avoid layout thrashing
+        for (const node of nodesToRemove) {
+            try {
+                if (node.tagName === 'SCRIPT') {
+                    node.remove();
+                } else {
+                    removeScamEl(node);
+                }
+            } catch(e) {}
+        }
+
+        // Run full overlay checks at most once per batch
+        if (runOverlayCheck) {
+            killFullscreenInnerIframeOverlays();
+        }
+    });
+
+    function startUnifiedObserver() {
+        if (isSafeHost) return; // Do not observe safe hosts to prevent CPU stuttering
+        if (!document.documentElement) {
+            setTimeout(startUnifiedObserver, 10);
+            return;
+        }
+        unifiedObserver.observe(document.documentElement, { childList: true, subtree: true });
     }
+    startUnifiedObserver();
+
 
     // === SCAM POPUP KILLER (periodic sweep, aggressiveMode only for broader heuristics) ===
     function killScamPopups() {
@@ -1239,16 +1374,40 @@
         killScamOverlays();
 
         // Aggressive-only: broader sweep
-        if (!aggressiveMode) return;
+        // Target and remove known malicious ad/scam video tags (DOM src or source children)
+        try {
+            const badVideoDomains = ['thatdisform.cyou', 'nightdestruct', 'chaturbate', 'conditionfuneral', 'hotslotmagazine', 'kaninhop'];
+            document.querySelectorAll('video').forEach(video => {
+                try {
+                    let isBad = false;
+                    const videoSrc = (video.src || '').toLowerCase();
+                    if (badVideoDomains.some(domain => videoSrc.includes(domain))) {
+                        isBad = true;
+                    }
+                    if (!isBad) {
+                        video.querySelectorAll('source').forEach(srcEl => {
+                            const srcVal = (srcEl.src || srcEl.getAttribute('src') || '').toLowerCase();
+                            if (badVideoDomains.some(domain => srcVal.includes(domain))) {
+                                isBad = true;
+                            }
+                        });
+                    }
+                    if (isBad) {
+                        reportBlock('ad', 'scam video');
+                        video.remove();
+                    }
+                } catch(e) {}
+            });
+        } catch(e) {}
 
-        document.querySelectorAll('video[src*="nightdestruct"], video[src*="chaturbate"]').forEach(el => {
-            try { reportBlock('ad', 'scam video'); el.remove(); } catch(e) {}
-        });
+        // Aggressive-only: broader sweep
+        if (!aggressiveMode) return;
     }
 
     // === AD KILLER ===
     function killGenericAds() {
         if (!aggressiveMode) return;
+        if (isSafeHost) return;
         try {
             document.querySelectorAll('iframe[src*="doubleclick"], iframe[src*="googlesyndication"]').forEach(el => {
                 try { reportBlock('ad', 'ad iframe'); el.remove(); } catch(e) {}
@@ -1268,6 +1427,7 @@
     // === GAMBLING BANNER REPLACER ===
     function replaceGamblingBanners() {
         if (!isEnabled || isCurrentSiteWhitelisted()) return;
+        if (isSafeHost) return;
         
         const host = location.hostname.toLowerCase();
         const isStreamup = host.includes('streamup');
@@ -1368,25 +1528,6 @@
         }
     }
 
-    // === AD SCRIPT BLOCKER ===
-    const AD_SCRIPT_NAMES = ['/ads.js', '/pagead.js', '/advertisement.js', '/tracking.js', 'pop-ad.js', 'pop-ad'];
-    const scriptObserver = new MutationObserver((mutations) => {
-        if (!shouldRunPopupKillers()) return;
-        for (const m of mutations) {
-            for (const node of m.addedNodes) {
-                if (node.tagName === 'SCRIPT' && node.src) {
-                    const src = node.src.toLowerCase();
-                    if (AD_SCRIPT_NAMES.some(n => src.includes(n)) || isAdUrl(src)) {
-                        node.remove();
-                        reportBlock('ad', 'script: ' + src.split('/').pop());
-                    }
-                }
-            }
-        }
-    });
-    if (shouldRunPopupKillers() && document.documentElement) {
-        scriptObserver.observe(document.documentElement, { childList: true, subtree: true });
-    }
 
     if (shouldRunPopupKillers()) {
         const cleanupNow = () => {
@@ -1409,6 +1550,126 @@
         setTimeout(cleanupNow, 250);
     }
     
+    // === SPOTIFY AD SKIPPER ===
+    function skipSpotifyAds() {
+        if (!hostname.includes('spotify.com')) return;
+
+        try {
+            // Gather all media elements (DOM + intercepted active elements)
+            const media = Array.from(new Set([
+                ...document.querySelectorAll('audio, video'),
+                ...activeMediaElements
+            ]));
+
+            const hasAudioPlaying = media.some(m => !m.paused && m.currentTime > 0);
+
+            let isAd = false;
+
+            // 1. Check document title for explicit ad keywords
+            const docTitle = (document.title || '').trim().toLowerCase();
+            if (docTitle.includes('advertisement') || docTitle.includes('sponsored') || docTitle.includes('spotify ad')) {
+                isAd = true;
+            }
+
+            // 2. Check Now Playing Widget content and metadata
+            const nowPlaying = document.querySelector('[data-testid="now-playing-widget"]');
+            if (nowPlaying && !isAd) {
+                const text = (nowPlaying.textContent || '').toLowerCase();
+                if (text.includes('advertisement') || text.includes('sponsored') || text.includes('spotify ad') || text.includes('spotify free')) {
+                    isAd = true;
+                }
+                if (nowPlaying.querySelector('a[href*="/ad/"], [aria-label*="Advertisement" i], .advertisement, [data-testid="advertisement-label"]')) {
+                    isAd = true;
+                }
+
+                // If the widget is present but has absolutely no links to albums, artists, or tracks, and we have active audio, it is an ad
+                const hasTrackLinks = nowPlaying.querySelector('a[href*="/album/"], a[href*="/artist/"], a[href*="/track/"], a[data-testid="context-item-link"]');
+                if (!hasTrackLinks && hasAudioPlaying) {
+                    isAd = true;
+                }
+            }
+
+            // 3. Check generic document title during active playback (real songs always have "Song Name • Artist Name")
+            if (!isAd) {
+                const isGenericTitle = docTitle === 'spotify' || docTitle === 'spotify free' || docTitle.startsWith('spotify –') || docTitle.startsWith('spotify -') || docTitle === '';
+                if (isGenericTitle && hasAudioPlaying) {
+                    isAd = true;
+                }
+            }
+
+            // 4. Fallback: Check body texts (includes sidebars, player panels, and text inside the DOM)
+            if (!isAd) {
+                const bodyText = (document.body ? document.body.innerText : '') || '';
+                if (/advertisement|sponsored|left in the break|continue after the break/i.test(bodyText)) {
+                    isAd = true;
+                }
+            }
+
+            // 5. Fallback: General ad label query
+            if (!isAd) {
+                const adLabel = document.querySelector('[aria-label*="Advertisement" i], .advertisement, .ads-container, [data-testid="advertisement-label"]');
+                if (adLabel && adLabel.offsetParent !== null) {
+                    isAd = true;
+                }
+            }
+
+            if (isAd) {
+                media.forEach(m => {
+                    try {
+                        // Enforce muting and 16x speed immediately using our bypass helper
+                        forcePlaybackRateAndMute(m, 16, true);
+
+                        // Add listeners to prevent Spotify from resetting volume/speed during ads
+                        if (!m._crunchHooked) {
+                            m._crunchHooked = true;
+                            
+                            m.addEventListener('ratechange', () => {
+                                if (m._crunchHooked && m.playbackRate !== 16) {
+                                    forcePlaybackRateAndMute(m, 16, true);
+                                }
+                            });
+                            
+                            m.addEventListener('volumechange', () => {
+                                if (m._crunchHooked && !m.muted) {
+                                    forcePlaybackRateAndMute(m, 16, true);
+                                }
+                            });
+                        }
+                    } catch(e) {}
+                });
+
+                // Click next button if available and enabled
+                const nextBtn = document.querySelector('[data-testid="control-button-skip-forward"], button[aria-label*="Next" i], button[aria-label*="Skip Forward" i]');
+                if (nextBtn && !nextBtn.disabled) {
+                    try {
+                        nextBtn.click();
+                        ['mousedown', 'mouseup', 'click'].forEach(type => {
+                            nextBtn.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }));
+                        });
+                    } catch(e) {}
+                }
+
+                const now = Date.now();
+                if (!skipSpotifyAds._last || now - skipSpotifyAds._last > 1000) {
+                    skipSpotifyAds._last = now;
+                    reportBlock('ad', 'Spotify ad crunched');
+                }
+            } else {
+                // Restore normal audio/video state when no ad is detected
+                media.forEach(m => {
+                    try {
+                        if (m._crunchHooked) {
+                            m._crunchHooked = false;
+                        }
+                        if (m.muted && m.playbackRate > 1) {
+                            forcePlaybackRateAndMute(m, 1, false);
+                        }
+                    } catch(e) {}
+                });
+            }
+        } catch(e) {}
+    }
+
     // Start killers
     function startKillers() {
         if (!document.body) {
@@ -1418,15 +1679,39 @@
         try { 
             killFullscreenInnerIframeOverlays();
             replaceGamblingBanners(); 
+            skipSpotifyAds();
         } catch(e) {}
-        // Regular slower scan
-        setInterval(() => {
+        // Regular slower scan run via requestIdleCallback/requestAnimationFrame fallbacks
+        const runPeriodicSweeps = () => {
             if (!isEnabled || isCurrentSiteWhitelisted()) return;
-            killFullscreenInnerIframeOverlays();
-            killScamPopups();
-            killGenericAds();
-            replaceGamblingBanners();
-        }, 3000);
+            
+            const execute = () => {
+                try {
+                    killFullscreenInnerIframeOverlays();
+                    killScamPopups();
+                    killGenericAds();
+                    replaceGamblingBanners();
+                    skipSpotifyAds();
+                } catch(e) {}
+            };
+
+            if (window.requestIdleCallback) {
+                window.requestIdleCallback(() => execute(), { timeout: 1000 });
+            } else if (window.requestAnimationFrame) {
+                window.requestAnimationFrame(() => execute());
+            } else {
+                execute();
+            }
+        };
+        setInterval(runPeriodicSweeps, 3000);
+        
+        // Ultra-fast scan for Spotify - 100ms for near-instant skip
+        if (hostname.includes('spotify.com')) {
+            setInterval(() => {
+                if (!isEnabled || isCurrentSiteWhitelisted()) return;
+                skipSpotifyAds();
+            }, 100);
+        }
     }
     
     startKillers();
@@ -1512,3 +1797,4 @@
     }, 5000);
 
 })();
+
