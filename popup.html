@@ -2,251 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <style>
-    /* --- ORIGINAL COOKIE CRUNCH STYLES --- */
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      width: 280px;
-      background: 
-        radial-gradient(circle at 20% 30%, rgba(255,255,255,0.7) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(255,255,255,0.5) 0%, transparent 50%),
-        linear-gradient(180deg, #Fdf5e6 0%, #FFF5E1 100%);
-      font-family: 'Arial Black', sans-serif;
-      text-align: center;
-      padding: 14px;
-      border: 4px solid #8B4513;
-      border-radius: 15px;
-      overflow: hidden;
-      position: relative;
-      min-height: 500px;
-    }
-    .header { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 4px; }
-    .bowl { font-size: 32px; }
-    h2 { color: #8B4513; font-size: 1em; text-transform: uppercase; }
-    .not-stamp {
-      color: #d32f2f; font-size: 1.3em; transform: rotate(-10deg);
-      display: block; margin: -2px 0 8px;
-    }
-    .hostname { color: #666; font-size: 11px; margin-bottom: 10px; word-break: break-all; }
-    .stats-grid {
-      display: grid; grid-template-columns: 1fr 1fr 1fr;
-      gap: 6px; margin-bottom: 10px;
-    }
-    .stat-box {
-      background: #fff; border: 2px solid #D2B48C; border-radius: 10px;
-      padding: 8px 4px;
-    }
-    .stat-num { font-size: 22px; color: #8B4513; line-height: 1; }
-    .stat-label { font-size: 9px; color: #666; text-transform: uppercase; margin-top: 2px; }
-    .total-bar {
-      background: linear-gradient(135deg, #8B4513, #A0522D);
-      color: #Fdf5e6; border-radius: 10px; padding: 8px;
-      margin-bottom: 10px; font-size: 13px;
-    }
-    .total-bar .big { font-size: 26px; font-weight: bold; }
-    .log-section { text-align: left; margin-bottom: 10px; }
-    .log-title { font-size: 10px; color: #8B4513; text-transform: uppercase; margin-bottom: 4px; }
-    .log-list {
-      max-height: 100px; overflow-y: auto; background: #fff;
-      border: 1px solid #D2B48C; border-radius: 6px; padding: 4px 6px;
-      font-family: Arial, sans-serif; font-size: 11px; color: #333;
-    }
-    .log-item { padding: 2px 0; border-bottom: 1px solid #f0e6d6; display: flex; gap: 4px; }
-    .log-item:last-child { border-bottom: none; }
-    .log-tag {
-      font-size: 9px; font-weight: bold; border-radius: 3px;
-      padding: 1px 4px; flex-shrink: 0;
-    }
-    .tag-popup { background: #ffcdd2; color: #c62828; }
-    .tag-ad { background: #fff3e0; color: #e65100; }
-    .tag-tab { background: #e8eaf6; color: #283593; }
-    .tag-click { background: #e0f2f1; color: #00695c; }
-    .log-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .log-empty { color: #aaa; font-style: italic; padding: 6px; text-align: center; }
-    .toggle-btn {
-      background-color: #D2B48C; border: 3px dashed #8B4513;
-      color: #3d2b1f; padding: 8px 16px; font-weight: bold;
-      cursor: pointer; border-radius: 50px; width: 100%;
-      font-family: 'Arial Black', sans-serif; font-size: 12px;
-    }
-    .toggle-btn:hover { background-color: #c4a47a; }
-    .toggle-btn.off { background-color: #ccc; border-color: #666; color: #666; }
-    .lifetime { margin: 10px 0; padding: 8px; background: #fff; border: 2px solid #D2B48C; border-radius: 10px; }
-    .lt-title { font-size: 10px; color: #8B4513; text-transform: uppercase; margin-bottom: 4px; }
-    .lt-num { font-size: 24px; color: #8B4513; font-weight: bold; }
-    .lt-row { display: flex; justify-content: space-between; font-size: 11px; color: #666; padding: 1px 4px; }
-    .wl-btn { width: 100%; padding: 6px; border: 2px solid #D2B48C; border-radius: 8px;
-      background: #fff; color: #8B4513; font-size: 10px; font-weight: bold;
-      cursor: pointer; margin-bottom: 8px; text-transform: uppercase; }
-    .wl-btn:hover { background: #f5e6d0; }
-    .wl-btn.active { background: #d32f2f; color: #fff; border-color: #b71c1c; }
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cookie Crunch Dashboard</title>
 
-    /* Falling cereal */
-    .cereal-container {
-      position: absolute; top: 0; left: 0; width: 100%;
-      min-height: 100%; pointer-events: none; z-index: 0; overflow: hidden;
-    }
-    body > *:not(.cereal-container) { position: relative; z-index: 1; }
-    .cereal-piece {
-      position: absolute; top: -24px; left: 0;
-      font-size: 16px;
-      animation: cerealFall linear forwards;
-      will-change: transform, opacity;
-      --fall-dist: 700px;
-    }
-    @keyframes cerealFall {
-      0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 0.9; }
-      15%  { transform: translateY(calc(var(--fall-dist) * 0.15)) rotate(60deg) translateX(16px) scale(0.95); opacity: 0.85; }
-      35%  { transform: translateY(calc(var(--fall-dist) * 0.35)) rotate(150deg) translateX(-12px) scale(1.05); opacity: 0.8; }
-      55%  { transform: translateY(calc(var(--fall-dist) * 0.55)) rotate(230deg) translateX(10px) scale(0.9); opacity: 0.7; }
-      75%  { transform: translateY(calc(var(--fall-dist) * 0.75)) rotate(300deg) translateX(-8px) scale(1); opacity: 0.5; }
-      100% { transform: translateY(var(--fall-dist)) rotate(380deg) translateX(4px) scale(0.85); opacity: 0; }
-    }
-
-    /* --- V10+ FUN STYLES --- */
-    .mascot {
-      font-size: 48px;
-      margin-right: 4px;
-      animation: wobble 2s ease-in-out infinite;
-      transition: transform 0.2s;
-      cursor: pointer;
-      user-select: none;
-    }
-    .mascot:hover { transform: scale(1.15) rotate(10deg); }
-    @keyframes wobble {
-      0%,100% { transform: rotate(0deg); }
-      25% { transform: rotate(-6deg); }
-      75% { transform: rotate(6deg); }
-    }
-    @keyframes crunchPress {
-      0% { transform: scale(1); }
-      50% { transform: scale(0.85); }
-      100% { transform: scale(1); }
-    }
-    .crunch-effect { animation: crunchPress 0.2s ease-out; }
-
-    .custom-block-row { display: flex; gap: 4px; margin-bottom: 10px; }
-    .custom-input { 
-      flex: 1; padding: 6px; border: 2px solid #D2B48C; 
-      border-radius: 6px; font-size: 11px; font-family: Arial, sans-serif; 
-    }
-    .add-btn { 
-      background: #8B4513; color: #fff; border: none; 
-      border-radius: 6px; padding: 0 10px; cursor: pointer; 
-      font-weight: bold; font-size: 12px; 
-    }
-    .crunch-mode-row { 
-      display: flex; align-items: center; justify-content: space-between; 
-      background: #fff; padding: 6px; border-radius: 8px; 
-      border: 2px solid #D2B48C; margin-bottom: 10px; font-size: 11px;
-      color: #8B4513; font-weight: bold;
-    }
-    .switch {
-      position: relative; display: inline-block; width: 34px; height: 20px;
-    }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider {
-      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
-      background-color: #ccc; transition: .4s; border-radius: 20px;
-    }
-    .slider:before {
-      position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px;
-      background-color: white; transition: .4s; border-radius: 50%;
-    }
-    input:checked + .slider { background-color: #8B4513; }
-    input:checked + .slider:before { transform: translateX(14px); }
-
-    /* Whitelist feedback span */
-    .wl-feedback {
-      display: none;
-      font-size: 9px;
-      margin-left: 4px;
-      font-weight: bold;
-    }
-
-    /* Filter Management Styles */
-    .manage-section {
-      margin-bottom: 10px;
-      text-align: left;
-    }
-    .manage-btn {
-      width: 100%;
-      padding: 6px;
-      border: 2px solid #8B4513;
-      border-radius: 8px;
-      background: #8B4513;
-      color: #fff;
-      font-size: 10px;
-      font-weight: bold;
-      font-family: 'Arial Black', sans-serif;
-      cursor: pointer;
-      text-align: center;
-      transition: background 0.3s;
-    }
-    .manage-btn:hover {
-      background: #A0522D;
-    }
-    .manage-panel {
-      background: #fff;
-      border: 2px solid #D2B48C;
-      border-radius: 8px;
-      padding: 8px;
-      margin-top: 4px;
-    }
-    .manage-list-title {
-      font-size: 9px;
-      color: #8B4513;
-      font-weight: bold;
-      margin-bottom: 4px;
-      border-bottom: 1px dashed #D2B48C;
-      padding-bottom: 2px;
-    }
-    .manage-list-container {
-      max-height: 80px;
-      overflow-y: auto;
-      font-family: Arial, sans-serif;
-      font-size: 11px;
-    }
-    .manage-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 3px 4px;
-      border-bottom: 1px solid #f9f5f0;
-      color: #333;
-    }
-    .manage-item:last-child {
-      border-bottom: none;
-    }
-    .manage-domain {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      flex: 1;
-      margin-right: 8px;
-    }
-    .delete-item-btn {
-      background: none;
-      border: none;
-      color: #d32f2f;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 12px;
-      padding: 0 4px;
-      line-height: 1;
-    }
-    .delete-item-btn:hover {
-      color: #b71c1c;
-      transform: scale(1.2);
-    }
-    .manage-empty {
-      color: #aaa;
-      font-style: italic;
-      font-size: 10px;
-      text-align: center;
-      padding: 6px 0;
-    }
-  </style>
+  <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="cereal-container" id="cerealBox"></div>
@@ -261,17 +20,20 @@
   
   <button class="wl-btn" id="wlBtn">Disable on this site</button>
   
-  <!-- Aggressive Mode -->
-  <div class="crunch-mode-row">
-    <span>AGGRESSIVE CRUNCH</span>
-    <label class="switch">
-      <input type="checkbox" id="aggressiveToggle">
-      <span class="slider"></span>
-    </label>
+  <!-- Aggressive Mode Switch -->
+  <div class="glass-card">
+    <div class="crunch-mode-row">
+      <span>AGGRESSIVE CRUNCH</span>
+      <label class="switch">
+        <input type="checkbox" id="aggressiveToggle">
+        <span class="slider"></span>
+      </label>
+    </div>
   </div>
 
   <div class="total-bar">
-    TOTAL BLOCKED: <span class="big" id="totalCount">0</span>
+    <span>TOTAL BLOCKED</span>
+    <span class="big" id="totalCount">0</span>
   </div>
   
   <div class="stats-grid">
@@ -289,25 +51,31 @@
     </div>
   </div>
 
-  <div class="log-section">
-    <div class="log-title">Recent Activity</div>
-    <div class="log-list" id="logList">
-      <div class="log-empty">No blocks yet on this page</div>
+  <div class="glass-card">
+    <div class="log-section">
+      <div class="log-title">Recent Activity</div>
+      <div class="log-list" id="logList">
+        <div class="log-empty">No blocks yet on this page</div>
+      </div>
     </div>
   </div>
 
   <!-- Custom Blocklist Input -->
-  <div class="custom-block-row">
-    <input type="text" id="customDomain" class="custom-input" placeholder="block domain.com">
-    <button id="addCustomBtn" class="add-btn">ADD</button>
-    <span class="wl-feedback" id="blockFeedback"></span>
+  <div class="glass-card" style="padding: 10px; margin-bottom: 8px;">
+    <div class="custom-block-row">
+      <input type="text" id="customDomain" class="custom-input" placeholder="block domain.com">
+      <button id="addCustomBtn" class="add-btn">ADD</button>
+      <span class="wl-feedback" id="blockFeedback"></span>
+    </div>
   </div>
 
   <!-- Whitelist Domain Input -->
-  <div class="custom-block-row">
-    <input type="text" id="whitelistInput" class="custom-input" placeholder="whitelist domain.com">
-    <button id="addWhitelistBtn" class="add-btn" style="background:#4CAF50;">ADD</button>
-    <span class="wl-feedback" id="wlFeedback"></span>
+  <div class="glass-card" style="padding: 10px; margin-bottom: 12px;">
+    <div class="custom-block-row">
+      <input type="text" id="whitelistInput" class="custom-input" placeholder="whitelist domain.com">
+      <button id="addWhitelistBtn" class="add-btn" style="background:#4CAF50;">ADD</button>
+      <span class="wl-feedback" id="wlFeedback"></span>
+    </div>
   </div>
 
   <!-- Manage Filters Section -->
