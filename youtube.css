@@ -1,7 +1,1 @@
-/* 
-   Cookie Crunch — YouTube Ad UI Hider 
-   This file is intentionally kept empty to prevent YouTube's 
-   anti-adblock detection from discovering hidden ad containers. 
-   YouTube ad blocking is handled dynamically in blocker_logic.js 
-   via silent speed-up, muting, and click-skipping.
-*/
+/* Intentionally empty to bypass YouTube adblock detection */
