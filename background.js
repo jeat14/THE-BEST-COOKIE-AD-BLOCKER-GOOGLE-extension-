@@ -38,6 +38,14 @@ const DEFAULT_KILL_LIST = [
     , "hotslotmagazine.com"
     , "kaninhop.info"
     , "thatdisform.cyou"
+    , "zyjylkltgeduq.online"
+    , "zfxclqvuwywnb.online"
+    , "trckyng.com"
+    , "agacep.com"
+    , "glaidauth.com"
+    , "xiapuhdhbdsmd.online"
+    , "xehprwuggzhjh.space"
+    , "newsboydurance.cfd"
 ];
 
 // === AD NETWORK PATTERNS for auto-close (broader than KILL_LIST) ===
@@ -107,9 +115,13 @@ const AD_NETWORK_PATTERNS = [
 
 // Domains we never auto-close (safety whitelist)
 const AUTO_CLOSE_NEVER = [
-    'google.com', 'youtube.com', 'github.com', 'stackoverflow.com',
+    'google.com', 'google.co.uk', 'google.com.au', 'google.ca',
+    'google.de', 'google.fr', 'google.es', 'google.it',
+    'google.co.in', 'google.co.jp', 'google.com.br',
+    'youtube.com', 'github.com', 'stackoverflow.com',
     'reddit.com', 'twitter.com', 'x.com', 'facebook.com',
     'wikipedia.org', 'amazon.com', 'bing.com', 'duckduckgo.com',
+    'bbc.co.uk', 'bbc.com',
 ];
 
 let KILL_LIST = [];
@@ -165,7 +177,7 @@ function ensureInitialized() {
                 const clean = extractHostname(d);
                 if (clean !== d) migrated = true;
                 return clean;
-            }).filter(Boolean);
+            }).filter(d => d && !AUTO_CLOSE_NEVER.some(safe => d === safe || d.endsWith('.' + safe)));
             customBlocklist = [...new Set(cleanedCustom)];
 
             const storedKill = res.killList || [];
@@ -192,15 +204,33 @@ function ensureInitialized() {
 // Start loading immediately
 ensureInitialized();
 
+// --- Side Panel setup ---
+// Tell Chrome to open the side panel automatically when the toolbar icon is clicked
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+
+// Also handle onInstalled to ensure it's enabled
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.sidePanel.setOptions({ path: 'popup.html', enabled: true }).catch(() => {});
+    chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+});
+
+
 // --- tab stats ---
 const tabStats = {};
 function getStats(tabId) {
     if (!tabStats[tabId]) tabStats[tabId] = { hostname: '', popups: 0, ads: 0, tabsKilled: 0, items: [] };
     return tabStats[tabId];
 }
+// Write tab stats to session storage so popup can read without waking service worker
+function flushStats(tabId) {
+    const s = tabStats[tabId];
+    if (!s) return;
+    chrome.storage.session.set({ [`tab_${tabId}`]: s }).catch(() => {});
+}
 chrome.tabs.onRemoved.addListener((tabId) => {
     delete tabStats[tabId];
     pendingAdTabs.delete(tabId);
+    chrome.storage.session.remove([`tab_${tabId}`]).catch(() => {});
 });
 
 let lifetimeStats = { totalBlocked: 0, popups: 0, ads: 0, tabsKilled: 0 };
@@ -216,6 +246,118 @@ function bumpLifetime(type) {
     chrome.storage.local.set({ lifetimeStats });
 }
 
+function executeToggleMaster() {
+    chrome.storage.local.get(['enabled'], (result) => {
+        const newState = !(result.enabled !== false);
+        chrome.storage.local.set({ enabled: newState }, () => {
+            chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+                if (tabs[0]) chrome.tabs.reload(tabs[0].id).catch(() => {});
+            });
+            pushToMenuBar();
+        });
+    });
+}
+
+function executeToggleWhitelist(hostname) {
+    const domain = extractHostname(hostname);
+    if (!domain) return;
+    ensureInitialized().then(() => {
+        const idx = whitelist.indexOf(domain);
+        if (idx >= 0) {
+            whitelist.splice(idx, 1);
+        } else {
+            whitelist.push(domain);
+            customBlocklist = customBlocklist.filter(d => d !== domain);
+        }
+        chrome.storage.local.set({ whitelist, customBlocklist }, () => {
+            setupRedirectRules();
+            chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+                if (tabs[0]) chrome.tabs.reload(tabs[0].id).catch(() => {});
+            });
+            pushToMenuBar();
+        });
+    });
+}
+
+function executeAddCustomBlock(domainRaw) {
+    const domain = extractHostname(domainRaw);
+    if (!domain) return;
+    // Safety guard: Never block safe domains
+    if (AUTO_CLOSE_NEVER.some(safe => domain === safe || domain.endsWith('.' + safe))) return;
+
+    ensureInitialized().then(() => {
+        if (!customBlocklist.includes(domain)) {
+            customBlocklist.push(domain);
+            chrome.storage.local.set({ customBlocklist }, () => {
+                setupRedirectRules();
+                chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+                    if (tabs[0]) {
+                        try {
+                            const tabHost = new URL(tabs[0].url).hostname;
+                            if (tabHost === domain || tabHost.endsWith('.' + domain)) {
+                                chrome.tabs.reload(tabs[0].id).catch(() => {});
+                            }
+                        } catch(e) {}
+                    }
+                });
+                pushToMenuBar();
+            });
+        }
+    });
+}
+
+// --- Push live stats to menu bar app (localhost:40999) ---
+async function pushToMenuBar() {
+    try {
+        const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+        if (!tab) return;
+        const stats = getStats(tab.id);
+        let hostname = stats.hostname;
+        if (!hostname && tab.url) {
+            try { hostname = new URL(tab.url).hostname; } catch(e) {}
+        }
+        const enabled = await chrome.storage.local.get(['enabled', 'whitelist']).then(r => ({
+            enabled: r.enabled !== false,
+            whitelisted: hostname ? (r.whitelist || []).some(h => hostname === h || hostname.endsWith('.' + h)) : false
+        }));
+        const payload = {
+            hostname,
+            popups: stats.popups || 0,
+            ads: stats.ads || 0,
+            tabsKilled: stats.tabsKilled || 0,
+            items: (stats.items || []).slice(-30),
+            lifetime: lifetimeStats,
+            enabled: enabled.enabled,
+            whitelisted: enabled.whitelisted
+        };
+        const response = await fetch('http://127.0.0.1:40999/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const resJson = await response.json();
+        if (resJson && resJson.commands && resJson.commands.length > 0) {
+            for (const cmd of resJson.commands) {
+                if (cmd.action === 'toggleMaster') {
+                    executeToggleMaster();
+                } else if (cmd.action === 'toggleWhitelist') {
+                    executeToggleWhitelist(cmd.hostname);
+                } else if (cmd.action === 'addCustomBlock') {
+                    executeAddCustomBlock(cmd.domain);
+                }
+            }
+        }
+    } catch(e) {
+        // Menu bar app not running — silently ignore
+    }
+}
+
+// Push stats every 2 seconds and immediately on tab change
+setInterval(pushToMenuBar, 2000);
+chrome.tabs.onActivated.addListener(() => setTimeout(pushToMenuBar, 100));
+chrome.tabs.onUpdated.addListener((_, info) => { if (info.status === 'complete') pushToMenuBar(); });
+
+
 function isWhitelisted(hostname) {
     if (!hostname) return false;
     return whitelist.some(h => hostname === h || hostname.endsWith('.' + h));
@@ -226,6 +368,8 @@ function isBadUrl(url) {
     const lower = url.toLowerCase();
     try {
         const hostname = new URL(url).hostname;
+        // Never block safe domains (same guard as isAdNetworkUrl)
+        if (AUTO_CLOSE_NEVER.some(d => hostname === d || hostname.endsWith('.' + d))) return false;
         if (isWhitelisted(hostname)) return false;
     } catch (e) {}
     const allBad = [...KILL_LIST, ...customBlocklist];
@@ -310,8 +454,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
             if (msg.type === 'popup') stats.popups++;
             else if (msg.type === 'ad') stats.ads++;
             stats.items.push({ type: msg.type, text: msg.text, time: Date.now() });
+            flushStats(sender.tab.id);
             chrome.tabs.sendMessage(sender.tab.id, { action: 'showCrunchEffect' }).catch(() => {});
             bumpLifetime(msg.type);
+            pushToMenuBar();
             sendResponse({ status: 'blocked' });
         });
         return true;
@@ -367,6 +513,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         ensureInitialized().then(() => {
             const domain = extractHostname(msg.domain);
             if (!domain) { sendResponse({ error: 'no domain' }); return; }
+            if (AUTO_CLOSE_NEVER.some(safe => domain === safe || domain.endsWith('.' + safe))) {
+                sendResponse(false);
+                return;
+            }
             if (!customBlocklist.includes(domain)) {
                 customBlocklist.push(domain);
                 chrome.storage.local.set({ customBlocklist }, () => {
@@ -409,8 +559,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
 });
 
-// --- Navigation & tab listeners ---
-
 // onCreatedNavigationTarget: fires when a page opens a new tab (window.open, target=_blank, etc.)
 chrome.webNavigation.onCreatedNavigationTarget.addListener(async (details) => {
     await ensureInitialized();
@@ -419,19 +567,15 @@ chrome.webNavigation.onCreatedNavigationTarget.addListener(async (details) => {
 
     // Kill if blank (torrent sites often open about:blank then redirect)
     if (targetUrl === '' || targetUrl === 'about:blank') {
-        // Track this tab — watch its first real navigation
         if (details.tabId) {
             pendingAdTabs.set(details.tabId, {
                 openerTabId: details.sourceTabId,
                 openedAt: Date.now()
             });
-            // Give it 3 seconds to navigate somewhere; if it goes to an ad URL, close it
-            // (handled by webNavigation.onBeforeNavigate below)
         }
         return;
     }
 
-    // Kill immediately if it matches kill list or ad network patterns
     if (isBadOrAdUrl(targetUrl)) {
         killTab(details.tabId);
         if (details.sourceTabId) {
@@ -442,7 +586,6 @@ chrome.webNavigation.onCreatedNavigationTarget.addListener(async (details) => {
         return;
     }
 
-    // Track all tabs opened by page code (they have a sourceTabId)
     if (details.sourceTabId && details.tabId) {
         pendingAdTabs.set(details.tabId, {
             openerTabId: details.sourceTabId,
@@ -466,7 +609,6 @@ chrome.tabs.onCreated.addListener(async (tab) => {
         return;
     }
 
-    // Track tabs with an opener (opened programmatically by page code)
     if (tab.openerTabId) {
         pendingAdTabs.set(tab.id, {
             openerTabId: tab.openerTabId,
@@ -484,14 +626,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         return;
     }
     
-    // Also close tabs that show Chrome's error pages from declarativeNetRequest blocking
     if (tab.title === chrome.i18n.getMessage('netErrorTitle') || 
         tab.title === 'Error' ||
         (tab.favIconUrl && tab.favIconUrl.includes('chrome-error'))) {
-        // Check if this tab was opened recently (within last 5 seconds)
         chrome.tabs.get(tabId, (t) => {
             if (chrome.runtime.lastError) return;
-            // Close error tabs that are trying to load blocked sites
             if (t && t.url && (t.url.includes('chrome-error') || t.url.startsWith('chrome://'))) {
                 chrome.tabs.remove(t.id).catch(() => {});
             }
@@ -499,8 +638,6 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     }
 });
 
-// Monitor navigation in pending (programmatically opened) tabs
-// If such a tab navigates to an ad URL within a short window, close it.
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     await ensureInitialized();
     if (!isEnabled || details.frameId !== 0) return;
@@ -510,7 +647,6 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
         const age = Date.now() - pending.openedAt;
         const url = details.url || '';
 
-        // Within 10 seconds of being opened, if it navigates to an ad URL → close it
         if (age < 10000 && isBadOrAdUrl(url)) {
             pendingAdTabs.delete(details.tabId);
             killTab(details.tabId);
@@ -522,7 +658,6 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
             return;
         }
 
-        // Also kill if navigating through a redirect chain that includes ad patterns
         if (age < 10000 && isAdNetworkUrl(url)) {
             pendingAdTabs.delete(details.tabId);
             killTab(details.tabId);
@@ -534,13 +669,11 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
             return;
         }
 
-        // If the tab has been open a while and navigated to a legit URL, stop tracking it
         if (age > 10000) {
             pendingAdTabs.delete(details.tabId);
         }
     }
 
-    // Always check main frame navigations against both lists
     if (isBadUrl(details.url)) {
         try { lastBlockedHostname = new URL(details.url).hostname; } catch(e) {}
     }
@@ -564,7 +697,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         }
     });
 
-    // Clean up stale pending tab entries (older than 30 seconds)
     const now = Date.now();
     for (const [tabId, info] of pendingAdTabs) {
         if (now - info.openedAt > 30000) {
@@ -573,7 +705,6 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     }
 });
 
-// Helper to handle blocked tab - redirects to blocked.html, falls back to closing
 function killTab(tabId) {
     chrome.tabs.update(tabId, { url: chrome.runtime.getURL('/blocked.html?popup=1') }).catch(() => {
         chrome.tabs.remove(tabId).catch(() => {});
