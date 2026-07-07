@@ -3,7 +3,7 @@ best ad blocker cookie cereal
 
 
 All Time Stats
-2019687
+201968780
 Popups:
 2016146
 Ads:
