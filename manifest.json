@@ -2,9 +2,10 @@
   "manifest_version": 3,
   "name": "Cookie Crunch Blocker",
   "version": "9.9",
-  "permissions": ["storage", "scripting", "declarativeNetRequest", "webNavigation", "tabs", "alarms"],
+  "permissions": ["storage", "scripting", "declarativeNetRequest", "webNavigation", "tabs", "alarms", "sidePanel"],
   "host_permissions": ["<all_urls>"],
-  "action": { "default_popup": "popup.html" },
+  "action": { "default_title": "Cookie Crunch Blocker" },
+  "side_panel": { "default_path": "popup.html" },
   "background": { "service_worker": "background.js" },
   "declarative_net_request": {
     "rule_resources": [{
@@ -15,7 +16,15 @@
   },
   "content_scripts": [{
     "matches": ["<all_urls>"],
-    "exclude_matches": ["*://*.youtube.com/*", "*://youtube.com/*", "*://*.youtu.be/*", "*://youtu.be/*"],
+    "exclude_matches": [
+      "*://*.youtube.com/*", "*://youtube.com/*", "*://*.youtu.be/*", "*://youtu.be/*",
+      "*://*.google.com/*", "*://google.com/*",
+      "*://*.google.co.uk/*", "*://google.co.uk/*",
+      "*://*.google.com.au/*", "*://google.com.au/*",
+      "*://*.google.ca/*", "*://google.ca/*",
+      "*://*.google.de/*", "*://google.de/*",
+      "*://*.google.fr/*", "*://google.fr/*"
+    ],
     "css": ["blocker.css"],
     "js": ["content_isolated.js"],
     "run_at": "document_start",
@@ -30,13 +39,21 @@
   },
   {
     "matches": ["<all_urls>"],
+    "exclude_matches": [
+      "*://*.google.com/*", "*://google.com/*",
+      "*://*.google.co.uk/*", "*://google.co.uk/*",
+      "*://*.google.com.au/*", "*://google.com.au/*",
+      "*://*.google.ca/*", "*://google.ca/*",
+      "*://*.google.de/*", "*://google.de/*",
+      "*://*.google.fr/*", "*://google.fr/*"
+    ],
     "js": ["blocker_logic.js"],
     "run_at": "document_start",
     "world": "MAIN",
     "all_frames": true
   }],
   "web_accessible_resources": [{
-    "resources": ["blocker_logic.js", "blocked.html", "assets/*"],
+    "resources": ["blocker_logic.js", "blocked.html", "popup.css", "assets/*"],
     "matches": ["<all_urls>"]
   }]
 }
